@@ -7,6 +7,7 @@ export interface AIProviderConfig {
   provider: AIProviderType;
   apiKey: string;
   model: string;
+  availableModels?: string[];
 }
 
 export const PROVIDER_PRESETS: Record<AIProviderType, { name: string; defaultModel: string; models: string[]; docsUrl: string }> = {
@@ -72,6 +73,111 @@ export function getActiveAIConfig(): AIProviderConfig {
 
 export function saveActiveAIConfig(config: AIProviderConfig): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+}
+
+/**
+ * Fetch live available models directly from the provider API using the user's API Key.
+ * Dynamically determines which models are unlocked and accessible for this specific key.
+ */
+export async function fetchLiveAvailableModels(
+  provider: AIProviderType,
+  apiKey: string
+): Promise<string[]> {
+  const cleanKey = apiKey.trim();
+  if (!cleanKey) {
+    return [];
+  }
+
+  // 1. Google Gemini Live Model Listing
+  if (provider === 'google') {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => null);
+      throw new Error(errJson?.error?.message || `Google API error: HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const rawModels = data.models || [];
+    const models: string[] = rawModels
+      .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+      .map((m: any) => (m.name as string).replace(/^models\//, ''))
+      .filter((name: string) => !name.includes('embedding') && !name.includes('aqa') && !name.includes('bison'));
+
+    // Sort so newest / flash / pro models appear at top
+    models.sort((a, b) => {
+      if (a.includes('flash') && !b.includes('flash')) return -1;
+      if (!a.includes('flash') && b.includes('flash')) return 1;
+      return a.localeCompare(b);
+    });
+
+    return models.length > 0 ? models : PROVIDER_PRESETS.google.models;
+  }
+
+  // 2. OpenAI (ChatGPT) Live Model Listing
+  if (provider === 'openai') {
+    const url = 'https://api.openai.com/v1/models';
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${cleanKey}` }
+    });
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => null);
+      throw new Error(errJson?.error?.message || `OpenAI API error: HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const models: string[] = (data.data || [])
+      .map((m: any) => m.id as string)
+      .filter((id: string) => 
+        (id.startsWith('gpt-') || id.startsWith('o1') || id.startsWith('o3') || id.includes('chat')) &&
+        !id.includes('realtime') && !id.includes('audio') && !id.includes('transcription') && !id.includes('moderation')
+      );
+
+    models.sort((a, b) => {
+      if (a.includes('4o') && !b.includes('4o')) return -1;
+      if (!a.includes('4o') && b.includes('4o')) return 1;
+      return a.localeCompare(b);
+    });
+
+    return models.length > 0 ? models : PROVIDER_PRESETS.openai.models;
+  }
+
+  // 3. DeepSeek Live Model Listing
+  if (provider === 'deepseek') {
+    const url = 'https://api.deepseek.com/models';
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${cleanKey}` }
+    });
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => null);
+      throw new Error(errJson?.error?.message || `DeepSeek API error: HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    const models: string[] = (data.data || []).map((m: any) => m.id as string);
+    return models.length > 0 ? models : PROVIDER_PRESETS.deepseek.models;
+  }
+
+  // 4. Anthropic Claude Model Listing
+  if (provider === 'anthropic') {
+    try {
+      const url = 'https://api.anthropic.com/v1/models';
+      const res = await fetch(url, {
+        headers: {
+          'x-api-key': cleanKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const models: string[] = (data.data || []).map((m: any) => m.id as string);
+        if (models.length > 0) return models;
+      }
+    } catch {
+      // Direct client CORS fallback
+    }
+    return PROVIDER_PRESETS.anthropic.models;
+  }
+
+  return [];
 }
 
 /**

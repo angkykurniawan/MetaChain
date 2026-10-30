@@ -7,6 +7,7 @@ import { ThemeToggle } from '../common/ThemeToggle';
 import { 
   getActiveAIConfig, 
   saveActiveAIConfig, 
+  fetchLiveAvailableModels,
   PROVIDER_PRESETS, 
   AIProviderType, 
   AIProviderConfig 
@@ -27,7 +28,9 @@ import {
   X,
   Bot,
   Lock,
-  Unlock
+  Unlock,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -46,13 +49,68 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [aiConfig, setAiConfig] = useState<AIProviderConfig>(getActiveAIConfig());
   const [keySaved, setKeySaved] = useState(false);
+  
+  // Dynamic live models state fetched directly from provider API
+  const [dynamicModels, setDynamicModels] = useState<string[]>(() => {
+    const cfg = getActiveAIConfig();
+    return cfg.availableModels && cfg.availableModels.length > 0 
+      ? cfg.availableModels 
+      : (PROVIDER_PRESETS[cfg.provider]?.models || []);
+  });
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [modelFetchError, setModelFetchError] = useState<string | null>(null);
+  const [modelFetchSuccess, setModelFetchSuccess] = useState<string | null>(null);
+
+  const handleFetchLiveModels = async (provider: AIProviderType, key: string) => {
+    if (!key.trim()) {
+      setDynamicModels(PROVIDER_PRESETS[provider]?.models || []);
+      setModelFetchError(null);
+      setModelFetchSuccess(null);
+      return;
+    }
+
+    setIsLoadingModels(true);
+    setModelFetchError(null);
+    setModelFetchSuccess(null);
+
+    try {
+      const models = await fetchLiveAvailableModels(provider, key);
+      if (models.length > 0) {
+        setDynamicModels(models);
+        setModelFetchSuccess(`Berhasil! Ditemukan ${models.length} model resmi langsung dari API ${PROVIDER_PRESETS[provider].name}.`);
+        setAiConfig((prev) => {
+          const nextModel = models.includes(prev.model) ? prev.model : models[0];
+          return {
+            ...prev,
+            model: nextModel,
+            availableModels: models
+          };
+        });
+      } else {
+        setDynamicModels(PROVIDER_PRESETS[provider]?.models || []);
+      }
+    } catch (err: any) {
+      console.warn('Live model fetch error:', err);
+      setModelFetchError(err.message || 'Gagal memuat model dari API Key ini.');
+      setDynamicModels(PROVIDER_PRESETS[provider]?.models || []);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
 
   const handleProviderChange = (provider: AIProviderType) => {
-    setAiConfig({
-      ...aiConfig,
+    setAiConfig((prev) => ({
+      ...prev,
       provider,
       model: PROVIDER_PRESETS[provider]?.defaultModel || ''
-    });
+    }));
+    setModelFetchError(null);
+    setModelFetchSuccess(null);
+    if (aiConfig.apiKey.trim()) {
+      handleFetchLiveModels(provider, aiConfig.apiKey);
+    } else {
+      setDynamicModels(PROVIDER_PRESETS[provider]?.models || []);
+    }
   };
 
   const handleSaveAIConfig = (e?: React.FormEvent) => {
@@ -101,7 +159,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {/* Multi-Provider AI Settings Button */}
             <button
               onClick={() => {
-                setAiConfig(getActiveAIConfig());
+                const current = getActiveAIConfig();
+                setAiConfig(current);
+                if (current.availableModels && current.availableModels.length > 0) {
+                  setDynamicModels(current.availableModels);
+                } else if (current.apiKey.trim()) {
+                  handleFetchLiveModels(current.provider, current.apiKey);
+                } else {
+                  setDynamicModels(PROVIDER_PRESETS[current.provider]?.models || []);
+                }
                 setShowApiKeyModal(true);
               }}
               className="py-1.5 px-2.5 sm:px-3 rounded-xl border border-slate-700 hover:border-cyan-400 bg-slate-800/60 hover:bg-slate-800 text-xs font-semibold text-slate-300 flex items-center gap-1.5 transition-all cursor-pointer"
@@ -281,13 +347,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         placeholder={`Masukkan API Key untuk ${PROVIDER_PRESETS[aiConfig.provider].name}...`}
                         value={aiConfig.apiKey}
                         onChange={(e) => setAiConfig({ ...aiConfig, apiKey: e.target.value })}
+                        onBlur={() => {
+                          if (aiConfig.apiKey.trim()) {
+                            handleFetchLiveModels(aiConfig.provider, aiConfig.apiKey);
+                          }
+                        }}
                         className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-sm focus:border-cyan-400 focus:outline-none font-mono"
                       />
                       <Key className="w-4 h-4 text-slate-500 absolute right-3 top-3 pointer-events-none" />
                     </div>
+
+                    {/* Button to dynamically fetch models from API Key */}
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        disabled={!aiConfig.apiKey.trim() || isLoadingModels}
+                        onClick={() => handleFetchLiveModels(aiConfig.provider, aiConfig.apiKey)}
+                        className="py-1.5 px-3 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-40 transition-all active:scale-95"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isLoadingModels ? 'animate-spin' : ''}`} />
+                        <span>{isLoadingModels ? 'Mengambil Model dari API...' : 'Muat Pilihan Model Resmi dari API Key'}</span>
+                      </button>
+
+                      {modelFetchSuccess && (
+                        <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5 shrink-0" />
+                          <span>{modelFetchSuccess}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {modelFetchError && (
+                      <div className="mt-2 p-2.5 rounded-xl bg-red-950/60 border border-red-500/40 text-red-200 text-xs flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                        <span>{modelFetchError}</span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Step 2: Model Selection (Unlocked only when API Key is filled) */}
+                  {/* Step 2: Model Selection (Determined dynamically from the entered API Key) */}
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
@@ -296,11 +394,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         ) : (
                           <Lock className="w-3.5 h-3.5 text-amber-400" />
                         )}
-                        <span>Langkah 2: Pilihan Model ({PROVIDER_PRESETS[aiConfig.provider].name})</span>
+                        <span>Langkah 2: Model yang Tersedia di API ({dynamicModels.length} Model Ditemukan)</span>
                       </label>
                       {aiConfig.apiKey.trim() ? (
                         <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
-                          <Check className="w-3 h-3" /> Terbuka
+                          <Check className="w-3 h-3" /> Terbuka ({dynamicModels.length} Model)
                         </span>
                       ) : (
                         <span className="text-[10px] text-amber-400 font-medium flex items-center gap-1">
@@ -310,7 +408,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
 
                     <select
-                      disabled={!aiConfig.apiKey.trim()}
+                      disabled={!aiConfig.apiKey.trim() || isLoadingModels}
                       value={aiConfig.model}
                       onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
                       className={`w-full px-3.5 py-2.5 rounded-xl text-sm font-mono transition-all ${
@@ -319,17 +417,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           : 'bg-slate-950/40 border border-slate-800 text-slate-600 cursor-not-allowed opacity-60'
                       }`}
                     >
-                      {PROVIDER_PRESETS[aiConfig.provider].models.map((m) => (
+                      {dynamicModels.map((m) => (
                         <option key={m} value={m}>
                           {m}
                         </option>
                       ))}
                     </select>
 
+                    {isLoadingModels && (
+                      <p className="text-[11px] text-cyan-400 mt-1.5 flex items-center gap-1.5">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Menghubungi API {PROVIDER_PRESETS[aiConfig.provider].name} untuk mengambil model yang aktif...</span>
+                      </p>
+                    )}
+
                     {!aiConfig.apiKey.trim() && (
                       <p className="text-[11px] text-amber-400/90 mt-1.5 flex items-center gap-1">
                         <Lock className="w-3 h-3 shrink-0" />
-                        <span>Masukkan API Key pada langkah 1 di atas untuk membuka pilihan model.</span>
+                        <span>Masukkan API Key pada langkah 1 untuk memuat model yang tersedia.</span>
                       </p>
                     )}
                   </div>
@@ -450,13 +555,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     placeholder={`Masukkan API Key ${PROVIDER_PRESETS[aiConfig.provider].name}...`}
                     value={aiConfig.apiKey}
                     onChange={(e) => setAiConfig({ ...aiConfig, apiKey: e.target.value })}
+                    onBlur={() => {
+                      if (aiConfig.apiKey.trim()) {
+                        handleFetchLiveModels(aiConfig.provider, aiConfig.apiKey);
+                      }
+                    }}
                     className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:border-cyan-400 focus:outline-none font-mono"
                   />
                   <Key className="w-4 h-4 text-slate-500 absolute right-3 top-3 pointer-events-none" />
                 </div>
+
+                {/* Button to fetch models dynamically from API */}
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    disabled={!aiConfig.apiKey.trim() || isLoadingModels}
+                    onClick={() => handleFetchLiveModels(aiConfig.provider, aiConfig.apiKey)}
+                    className="py-1 px-2.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-cyan-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-40 transition-all active:scale-95"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isLoadingModels ? 'animate-spin' : ''}`} />
+                    <span>{isLoadingModels ? 'Mengambil Model...' : 'Muat Pilihan Model dari API Key'}</span>
+                  </button>
+
+                  {modelFetchSuccess && (
+                    <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                      <Check className="w-3 h-3 shrink-0" />
+                      <span>{modelFetchSuccess}</span>
+                    </span>
+                  )}
+                </div>
+
+                {modelFetchError && (
+                  <div className="mt-2 p-2 rounded-lg bg-red-950/60 border border-red-500/40 text-red-200 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                    <span>{modelFetchError}</span>
+                  </div>
+                )}
               </div>
 
-              {/* Step 2: Model Selection (Unlocked only when API Key is filled) */}
+              {/* Step 2: Model Selection (Determined dynamically from the entered API Key) */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
@@ -465,11 +602,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     ) : (
                       <Lock className="w-3.5 h-3.5 text-amber-400" />
                     )}
-                    <span>Langkah 2: Model AI ({PROVIDER_PRESETS[aiConfig.provider].name})</span>
+                    <span>Langkah 2: Model yang Tersedia ({dynamicModels.length} Model Ditemukan)</span>
                   </label>
                   {aiConfig.apiKey.trim() ? (
                     <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
-                      <Check className="w-3 h-3" /> Terbuka
+                      <Check className="w-3 h-3" /> Terbuka ({dynamicModels.length} Model)
                     </span>
                   ) : (
                     <span className="text-[10px] text-amber-400 font-medium flex items-center gap-1">
@@ -479,7 +616,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 <select
-                  disabled={!aiConfig.apiKey.trim()}
+                  disabled={!aiConfig.apiKey.trim() || isLoadingModels}
                   value={aiConfig.model}
                   onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
                   className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-mono transition-all ${
@@ -488,17 +625,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       : 'bg-slate-950/40 border border-slate-800 text-slate-600 cursor-not-allowed opacity-60'
                   }`}
                 >
-                  {PROVIDER_PRESETS[aiConfig.provider].models.map((m) => (
+                  {dynamicModels.map((m) => (
                     <option key={m} value={m}>
                       {m}
                     </option>
                   ))}
                 </select>
 
+                {isLoadingModels && (
+                  <p className="text-[10px] text-cyan-400 mt-1 flex items-center gap-1">
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    <span>Menghubungi API {PROVIDER_PRESETS[aiConfig.provider].name} untuk mengambil model...</span>
+                  </p>
+                )}
+
                 {!aiConfig.apiKey.trim() && (
                   <p className="text-[10px] text-amber-400/90 mt-1 flex items-center gap-1">
                     <Lock className="w-3 h-3 shrink-0" />
-                    <span>Masukkan API Key pada langkah 1 untuk membuka pilihan model.</span>
+                    <span>Masukkan API Key pada langkah 1 untuk memuat model yang tersedia.</span>
                   </p>
                 )}
               </div>
