@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { speechEngine } from '../../lib/speechEngine';
 import { useLanguage } from '../../lib/i18n';
-import { Mic, Send, Sparkles, Square } from 'lucide-react';
+import { Mic, Send, Sparkles, Square, AlertCircle, X } from 'lucide-react';
 
 interface VoiceChatBarProps {
   topicTitle: string;
@@ -21,6 +21,34 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
 
+  // Otomatis bersihkan pesan error setelah 8 detik
+  useEffect(() => {
+    if (speechError) {
+      const timer = setTimeout(() => {
+        setSpeechError(null);
+      }, 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [speechError]);
+
+  const getFriendlySpeechError = (err: string) => {
+    switch (err) {
+      case 'network':
+        return 'Server pengenal suara Google tidak dapat dijangkau (kendala koneksi / firewall browser). Silakan ketik pertanyaan di kolom teks.';
+      case 'not-allowed':
+      case 'service-not-allowed':
+        return 'Akses mikrofon belum diizinkan. Harap izinkan mikrofon di pengaturan peramban (ikon gembok di address bar).';
+      case 'audio-capture':
+        return 'Mikrofon tidak ditemukan atau sedang digunakan oleh aplikasi lain.';
+      case 'no-speech':
+        return 'Tidak ada suara yang terdeteksi. Silakan coba bicara kembali atau gunakan input teks.';
+      case 'aborted':
+        return null;
+      default:
+        return `Pengenalan suara mengalami kendala (${err}). Silakan gunakan input teks di samping.`;
+    }
+  };
+
   const handleToggleMic = () => {
     if (isListening) {
       speechEngine.stopListening();
@@ -34,7 +62,11 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
           }
         },
         (listening) => setIsListening(listening),
-        (error) => setSpeechError(error),
+        (error) => {
+          if (error !== 'aborted') {
+            setSpeechError(error);
+          }
+        },
         'id'
       );
     }
@@ -57,6 +89,8 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
     `Apa manfaat terbesarnya?`,
     `Roadmap untuk pemula?`
   ];
+
+  const friendlyError = speechError ? getFriendlySpeechError(speechError) : null;
 
   return (
     <div className="space-y-2">
@@ -139,10 +173,21 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
         </button>
       </form>
 
-      {/* Status banner */}
-      {speechError && (
-        <div className="text-[10px] text-red-400 px-2">
-          Mic status: {speechError} (Gunakan input teks di samping).
+      {/* Friendly Status banner */}
+      {friendlyError && (
+        <div className="text-[11px] text-amber-300 bg-amber-950/40 border border-amber-500/40 rounded-xl px-3 py-1.5 flex items-center justify-between gap-2 shadow-sm">
+          <div className="flex items-center gap-1.5 truncate">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="truncate">{friendlyError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSpeechError(null)}
+            className="p-0.5 rounded text-amber-400 hover:text-white hover:bg-amber-900/60 transition-colors cursor-pointer shrink-0"
+            title="Tutup pesan"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
     </div>
