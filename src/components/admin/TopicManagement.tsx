@@ -1,13 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { Topic } from '../../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Topic, AvatarModelType } from '../../types';
 import { dbService } from '../../lib/supabase';
+import { useLanguage } from '../../lib/i18n';
 import { TopicModal } from './TopicModal';
-import { Plus, Edit2, Trash2, Bot, Sparkles, FileText, CheckCircle2 } from 'lucide-react';
+import { 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  Bot, 
+  Sparkles, 
+  FileText, 
+  CheckCircle2,
+  Search,
+  X,
+  SlidersHorizontal,
+  RotateCcw,
+  BookOpen
+} from 'lucide-react';
 
 export const TopicManagement: React.FC = () => {
+  const { lang } = useLanguage();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeModal, setActiveModal] = useState<Topic | 'new' | null>(null);
+
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [guideFilter, setGuideFilter] = useState<'all' | 'custom' | 'ai'>('all');
+  const [avatarFilter, setAvatarFilter] = useState<'all' | AvatarModelType>('all');
+  const [sortBy, setSortBy] = useState<'order-asc' | 'order-desc' | 'title-asc' | 'title-desc'>('order-asc');
 
   const fetchTopics = async () => {
     setLoading(true);
@@ -44,8 +65,55 @@ export const TopicManagement: React.FC = () => {
     }
   };
 
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setGuideFilter('all');
+    setAvatarFilter('all');
+    setSortBy('order-asc');
+  };
+
+  const hasActiveFilter = searchQuery.trim() !== '' || guideFilter !== 'all' || avatarFilter !== 'all' || sortBy !== 'order-asc';
+
+  // Filtered and sorted topics
+  const filteredTopics = useMemo(() => {
+    return topics
+      .filter((t) => {
+        // Text search matching across all relevant fields
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim();
+          const matchTitle = t.title.toLowerCase().includes(q);
+          const matchDesc = (t.description || '').toLowerCase().includes(q);
+          const matchCharName = (t.character_name || '').toLowerCase().includes(q);
+          const matchPersona = (t.character_persona || '').toLowerCase().includes(q);
+          const matchAvatar = (t.character_avatar_type || '').toLowerCase().replace(/_/g, ' ').includes(q);
+          const matchModule = `modul #${t.order_index}`.toLowerCase().includes(q) || `#${t.order_index}`.includes(q) || String(t.order_index) === q;
+
+          if (!matchTitle && !matchDesc && !matchCharName && !matchPersona && !matchAvatar && !matchModule) {
+            return false;
+          }
+        }
+
+        // Guide status filter
+        const hasCustomGuide = Boolean(t.guide_content || t.guide_file_url);
+        if (guideFilter === 'custom' && !hasCustomGuide) return false;
+        if (guideFilter === 'ai' && hasCustomGuide) return false;
+
+        // Avatar type filter
+        if (avatarFilter !== 'all' && t.character_avatar_type !== avatarFilter) return false;
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'order-asc') return a.order_index - b.order_index;
+        if (sortBy === 'order-desc') return b.order_index - a.order_index;
+        if (sortBy === 'title-asc') return a.title.localeCompare(b.title);
+        if (sortBy === 'title-desc') return b.title.localeCompare(a.title);
+        return 0;
+      });
+  }, [topics, searchQuery, guideFilter, avatarFilter, sortBy]);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Top Banner & Add Button */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-900 border border-slate-800">
         <div>
@@ -60,14 +128,143 @@ export const TopicManagement: React.FC = () => {
 
         <button
           onClick={() => setActiveModal('new')}
-          className="py-2 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
+          className="py-2 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/20 transition-all cursor-pointer shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Tambah Materi Baru</span>
         </button>
       </div>
 
-      {/* Grid of Topics */}
+      {/* Search & Filter Bar */}
+      <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3 shadow-md">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+          {/* Main Search Input */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={
+                lang === 'en'
+                  ? 'Search module title, description, mentor, avatar...'
+                  : 'Cari judul materi, deskripsi, nama mentor, tipe avatar...'
+              }
+              className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                title={lang === 'en' ? 'Clear search' : 'Hapus pencarian'}
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Quick Filters (Grid on mobile, flex on desktop) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 lg:flex lg:items-center">
+            {/* Guide Type Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-300">
+              <BookOpen className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <select
+                value={guideFilter}
+                onChange={(e) => setGuideFilter(e.target.value as any)}
+                className="bg-transparent text-xs text-slate-200 focus:outline-none cursor-pointer w-full"
+              >
+                <option value="all" className="bg-slate-900 text-slate-200">
+                  {lang === 'en' ? 'All Silabus' : 'Semua Silabus'}
+                </option>
+                <option value="custom" className="bg-slate-900 text-slate-200">
+                  {lang === 'en' ? 'Admin Guide' : 'Panduan Admin'}
+                </option>
+                <option value="ai" className="bg-slate-900 text-slate-200">
+                  {lang === 'en' ? 'AI Fallback' : 'AI Otomatis'}
+                </option>
+              </select>
+            </div>
+
+            {/* Avatar Model Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-300">
+              <Bot className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <select
+                value={avatarFilter}
+                onChange={(e) => setAvatarFilter(e.target.value as any)}
+                className="bg-transparent text-xs text-slate-200 focus:outline-none cursor-pointer w-full"
+              >
+                <option value="all" className="bg-slate-900 text-slate-200">
+                  {lang === 'en' ? 'All Avatars' : 'Semua Avatar'}
+                </option>
+                <option value="cyber_humanoid" className="bg-slate-900 text-slate-200">
+                  Cyber Humanoid
+                </option>
+                <option value="floating_orb" className="bg-slate-900 text-slate-200">
+                  Floating Orb
+                </option>
+                <option value="mech_guard" className="bg-slate-900 text-slate-200">
+                  Mech Guard
+                </option>
+                <option value="holo_sage" className="bg-slate-900 text-slate-200">
+                  Holo Sage
+                </option>
+              </select>
+            </div>
+
+            {/* Sort Order Selector */}
+            <div className="flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-300">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-transparent text-xs text-slate-200 focus:outline-none cursor-pointer w-full"
+              >
+                <option value="order-asc" className="bg-slate-900 text-slate-200">
+                  {lang === 'en' ? 'Module # (Asc)' : 'Modul # (Terkecil)'}
+                </option>
+                <option value="order-desc" className="bg-slate-900 text-slate-200">
+                  {lang === 'en' ? 'Module # (Desc)' : 'Modul # (Terbesar)'}
+                </option>
+                <option value="title-asc" className="bg-slate-900 text-slate-200">
+                  {lang === 'en' ? 'Title (A-Z)' : 'Judul (A - Z)'}
+                </option>
+                <option value="title-desc" className="bg-slate-900 text-slate-200">
+                  {lang === 'en' ? 'Title (Z-A)' : 'Judul (Z - A)'}
+                </option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Counter & Active Filter Reset */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80 text-[11px] text-slate-400">
+          <div className="flex items-center gap-2">
+            <span>
+              {hasActiveFilter
+                ? lang === 'en'
+                  ? `Showing ${filteredTopics.length} of ${topics.length} learning modules`
+                  : `Menampilkan ${filteredTopics.length} dari ${topics.length} materi pembelajaran`
+                : lang === 'en'
+                ? `Total ${topics.length} learning modules`
+                : `Total ${topics.length} materi pembelajaran`}
+            </span>
+          </div>
+
+          {hasActiveFilter && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer font-medium"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>{lang === 'en' ? 'Reset All Filters' : 'Reset Semua Filter'}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Grid of Topics or Empty States */}
       {loading ? (
         <div className="py-16 text-center text-slate-500 text-xs">
           Memuat daftar kurikulum...
@@ -76,9 +273,34 @@ export const TopicManagement: React.FC = () => {
         <div className="py-16 text-center text-slate-500 text-xs">
           Belum ada topik pembelajaran. Tambahkan topik baru dengan tombol di atas.
         </div>
+      ) : filteredTopics.length === 0 ? (
+        <div className="py-16 text-center rounded-2xl border border-dashed border-slate-800 bg-slate-900/50 p-8">
+          <div className="w-12 h-12 mx-auto rounded-full bg-slate-800/80 flex items-center justify-center text-slate-400 mb-3">
+            <Search className="w-6 h-6 text-slate-500" />
+          </div>
+          <h3 className="text-sm font-bold text-slate-200">
+            {lang === 'en' ? 'No matching learning topics found' : 'Tidak ada materi yang sesuai pencarian'}
+          </h3>
+          <p className="text-xs text-slate-400 max-w-md mx-auto mt-1 mb-4 leading-relaxed">
+            {searchQuery
+              ? lang === 'en'
+                ? `No topics match "${searchQuery}". Try using different keywords or reset the filters.`
+                : `Tidak ada materi yang cocok dengan "${searchQuery}". Coba gunakan kata kunci lain atau reset filter.`
+              : lang === 'en'
+              ? 'No topics match the selected filters.'
+              : 'Tidak ada materi yang sesuai dengan kombinasi filter yang dipilih.'}
+          </p>
+          <button
+            onClick={handleResetFilters}
+            className="py-1.5 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>{lang === 'en' ? 'Reset Filters' : 'Reset Filter Pencarian'}</span>
+          </button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {topics.map((t) => {
+          {filteredTopics.map((t) => {
             const hasCustomGuide = Boolean(t.guide_content || t.guide_file_url);
 
             return (
@@ -195,4 +417,3 @@ export const TopicManagement: React.FC = () => {
     </div>
   );
 };
-
