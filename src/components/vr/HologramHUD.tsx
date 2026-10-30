@@ -4,22 +4,22 @@ import { generateAIFallbackCurriculum } from '../../lib/characterGen';
 import { getActiveAIConfig, PROVIDER_PRESETS } from '../../lib/aiProvider';
 import { useLanguage } from '../../lib/i18n';
 import { VoiceChatBar } from './VoiceChatBar';
-import { 
-  BookOpen, 
-  MessageSquare, 
-  Volume2, 
-  Bot, 
-  CheckCircle2, 
-  AlertTriangle, 
-  ChevronRight, 
-  ChevronDown, 
-  ChevronUp, 
-  FileText, 
-  Lock, 
-  Cpu, 
-  User, 
-  Sparkles, 
-  Square 
+import {
+  BookOpen,
+  MessageSquare,
+  Volume2,
+  Bot,
+  CheckCircle2,
+  AlertTriangle,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Lock,
+  Cpu,
+  User,
+  Sparkles,
+  Square
 } from 'lucide-react';
 
 interface HologramHUDProps {
@@ -131,11 +131,11 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
             <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showTopicSelector ? 'rotate-90' : ''}`} />
           </button>
 
-          {/* Floating Dropdown 11 Topics */}
+          {/* Floating Dropdown Topics */}
           {showTopicSelector && (
             <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900/95 border border-cyan-500/40 rounded-2xl p-2 shadow-2xl z-50 max-h-56 overflow-y-auto">
               <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-1 mb-1">
-                Pilih Modul Pembelajaran (11 Topik)
+                Pilih Modul Pembelajaran
               </div>
               {allTopics.map((tItem) => (
                 <button
@@ -144,11 +144,10 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
                     onSelectTopic(tItem);
                     setShowTopicSelector(false);
                   }}
-                  className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors ${
-                    tItem.id === currentTopic.id
+                  className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs flex items-center justify-between transition-colors ${tItem.id === currentTopic.id
                       ? 'bg-cyan-500/20 text-cyan-300 font-bold'
                       : 'hover:bg-slate-800 text-slate-300'
-                  }`}
+                    }`}
                 >
                   <span className="truncate">
                     <span className="text-[10px] font-mono text-slate-500 mr-1.5">#{tItem.order_index}</span>
@@ -200,9 +199,8 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
       <div className="flex border-b border-slate-800 my-2.5 sm:my-3 gap-2">
         <button
           onClick={() => setActiveTab('curriculum')}
-          className={`pb-2 px-2.5 sm:px-3 text-xs font-bold flex items-center gap-1.5 transition-colors relative cursor-pointer ${
-            activeTab === 'curriculum' ? 'text-cyan-400' : 'text-slate-400 hover:text-slate-200'
-          }`}
+          className={`pb-2 px-2.5 sm:px-3 text-xs font-bold flex items-center gap-1.5 transition-colors relative cursor-pointer ${activeTab === 'curriculum' ? 'text-cyan-400' : 'text-slate-400 hover:text-slate-200'
+            }`}
         >
           <BookOpen className="w-3.5 h-3.5" />
           <span>{t.curriculumTab}</span>
@@ -213,9 +211,8 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
 
         <button
           onClick={() => setActiveTab('chat')}
-          className={`pb-2 px-2.5 sm:px-3 text-xs font-bold flex items-center gap-1.5 transition-colors relative cursor-pointer ${
-            activeTab === 'chat' ? 'text-cyan-400' : 'text-slate-400 hover:text-slate-200'
-          }`}
+          className={`pb-2 px-2.5 sm:px-3 text-xs font-bold flex items-center gap-1.5 transition-colors relative cursor-pointer ${activeTab === 'chat' ? 'text-cyan-400' : 'text-slate-400 hover:text-slate-200'
+            }`}
         >
           <MessageSquare className="w-3.5 h-3.5" />
           <span>{t.chatTab}</span>
@@ -229,7 +226,7 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
       </div>
 
       {/* Tab Content Display */}
-      <div 
+      <div
         ref={chatScrollRef}
         className="flex-1 overflow-y-auto pr-1 space-y-3 mb-2.5 min-h-[180px] max-h-[300px]"
       >
@@ -347,9 +344,8 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
               messages.map((m) => (
                 <div
                   key={m.id}
-                  className={`flex flex-col ${
-                    m.sender === 'user' ? 'items-end' : 'items-start'
-                  }`}
+                  className={`flex flex-col ${m.sender === 'user' ? 'items-end' : 'items-start'
+                    }`}
                 >
                   {/* Sender Header */}
                   <div className="w-full flex items-center justify-between gap-1.5 text-[10px] text-slate-400 mb-1 px-1">
@@ -415,11 +411,10 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
 
                   {/* Bubble Content */}
                   <div
-                    className={`max-w-[92%] sm:max-w-[88%] rounded-2xl px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs leading-relaxed shadow-md ${
-                      m.sender === 'user'
+                    className={`max-w-[92%] sm:max-w-[88%] rounded-2xl px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs leading-relaxed shadow-md ${m.sender === 'user'
                         ? 'bg-cyan-500 text-slate-950 font-medium rounded-br-none'
                         : 'bg-slate-900/90 border border-slate-700/80 text-slate-100 rounded-bl-none shadow-cyan-950/40'
-                    }`}
+                      }`}
                   >
                     <p className="whitespace-pre-line">{m.text}</p>
                   </div>

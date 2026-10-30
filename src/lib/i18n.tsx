@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 
 export type Language = 'id' | 'en';
 
@@ -186,7 +186,7 @@ const translations: Record<Language, Translations> = {
     loginErrorEmpty: 'Harap isi username dan password.',
 
     // Admin Navigation & Tabs
-    tabCurriculum: 'Kurikulum & Karakter AI (11 Modul)',
+    tabCurriculum: 'Kurikulum & Karakter AI',
     tabStudents: 'Manajemen Siswa (Pengguna VR)',
     tabAI: 'Integrasi AI Provider',
     topicCountLabel: 'Modul',
@@ -291,7 +291,7 @@ const translations: Record<Language, Translations> = {
     // Landing Page
     navHome: 'Beranda',
     navFeatures: 'Fitur Spasial',
-    navModules: '11 Modul Materi',
+    navModules: 'Modul',
     navDemo: 'Akses Demo',
     heroHeadline: 'Eksplorasi Masa Depan Pembelajaran Teknologi di Ruang 3D WebXR',
     heroSubheadline: 'Akademi virtual spasial imersif yang didampingi Karakter 3D AI Mentor khusus untuk setiap disiplin teknologi modern — dari Blockchain, Cloud, DevOps, hingga AI/ML.',
@@ -303,7 +303,7 @@ const translations: Record<Language, Translations> = {
     copyEmailBtn: 'Salin Alamat Email',
     emailCopiedMsg: 'Email berhasil disalin!',
     featuresTitle: 'Keunggulan Pembelajaran Spasial MetaChain',
-    modulesTitle: '11 Modul Teknologi Siap Dipelajari',
+    modulesTitle: 'Modul Teknologi Siap Dipelajari',
     modulesSubtitle: 'Setiap modul memiliki 1 Karakter 3D AI Mentor khusus dengan persona, warna neon, dan suara unik.'
   },
   en: {
@@ -337,7 +337,7 @@ const translations: Record<Language, Translations> = {
     loginErrorEmpty: 'Please enter both username and password.',
 
     // Admin Navigation & Tabs
-    tabCurriculum: 'Curriculum & AI Characters (11 Modules)',
+    tabCurriculum: 'Curriculum & AI Characters',
     tabStudents: 'Student Management (VR Users)',
     tabAI: 'AI Provider Integration',
     topicCountLabel: 'Module',
@@ -442,7 +442,7 @@ const translations: Record<Language, Translations> = {
     // Landing Page
     navHome: 'Home',
     navFeatures: 'Spatial Features',
-    navModules: '11 Modules',
+    navModules: 'Modules',
     navDemo: 'Demo Access',
     heroHeadline: 'Explore the Future of Tech Education in 3D WebXR',
     heroSubheadline: 'An immersive spatial academy accompanied by dedicated 3D AI Mentors for each modern technology field — from Blockchain, Cloud, and DevOps to AI & Spatial Computing.',
@@ -454,7 +454,7 @@ const translations: Record<Language, Translations> = {
     copyEmailBtn: 'Copy Email Address',
     emailCopiedMsg: 'Email copied to clipboard!',
     featuresTitle: 'Why Choose MetaChain Spatial Learning',
-    modulesTitle: '11 Ready-to-Learn Tech Modules',
+    modulesTitle: 'Tech Modules Ready to Learn',
     modulesSubtitle: 'Every module is powered by 1 dedicated 3D AI Mentor with custom persona, neon visual style, and voice identity.'
   }
 };

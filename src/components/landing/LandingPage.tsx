@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Topic } from '../../types';
+import { dbService } from '../../lib/supabase';
 import { useLanguage } from '../../lib/i18n';
 import { ThemeToggle } from '../common/ThemeToggle';
 import { 
@@ -7,7 +9,6 @@ import {
   Bot, 
   Volume2, 
   Lock, 
-  Globe, 
   Sparkles, 
   Mail, 
   Copy, 
@@ -15,36 +16,51 @@ import {
   ArrowRight, 
   ChevronRight, 
   Layers, 
-  Shield, 
   ExternalLink,
-  Code2,
-  Terminal,
-  Activity,
   UserCheck
 } from 'lucide-react';
 
 interface LandingPageProps {
   onOpenLogin: () => void;
+  topics?: Topic[];
 }
 
-const MODULES_SHOWCASE = [
-  { id: 1, title: 'Blockchain Architecture & Consensus', mentor: 'Cipher-304', color: '#f59e0b', tag: 'Web3 / Crypto' },
-  { id: 2, title: 'Web3 & Smart Contracts', mentor: 'Solidity-Bot', color: '#10b981', tag: 'Decentralized' },
-  { id: 3, title: 'Cloud Computing & Distributed Systems', mentor: 'Nimbus-42', color: '#60a5fa', tag: 'Cloud / Server' },
-  { id: 4, title: 'DevOps & CI/CD Pipelines', mentor: 'Nexus-Ops', color: '#b45309', tag: 'Automation' },
-  { id: 5, title: 'Modern Programming & Algorithms', mentor: 'Code-Sensei', color: '#06b6d4', tag: 'Software Eng' },
-  { id: 6, title: 'Computer Networks & Protocols', mentor: 'Synapse-77', color: '#a855f7', tag: 'Networking' },
-  { id: 7, title: 'Cybersecurity & Ethical Hacking', mentor: 'Aegis-99', color: '#ef4444', tag: 'Zero Trust' },
-  { id: 8, title: 'Artificial Intelligence & Machine Learning', mentor: 'Cortex-AI', color: '#ec4899', tag: 'Deep Learning' },
-  { id: 9, title: 'High-Scale System Design', mentor: 'Architect-Prime', color: '#6366f1', tag: 'Scalability' },
-  { id: 10, title: 'Spatial Computing & WebXR', mentor: 'Vector-XR', color: '#14b8a6', tag: '3D & Virtual' },
-  { id: 11, title: 'Internet of Things (IoT) & Embedded', mentor: 'Sensor-Node', color: '#8b5cf6', tag: 'Hardware' }
-];
-
-export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
-  const { lang, t } = useLanguage();
+export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin, topics: initialTopics }) => {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
+  const [topics, setTopics] = useState<Topic[]>(initialTopics || []);
+  const [loadingTopics, setLoadingTopics] = useState<boolean>(!initialTopics || initialTopics.length === 0);
   const contactEmail = 'kurniawan.angang2005@gmail.com';
+
+  useEffect(() => {
+    if (initialTopics && initialTopics.length > 0) {
+      setTopics(initialTopics);
+      setLoadingTopics(false);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchOfficialTopics = async () => {
+      try {
+        setLoadingTopics(true);
+        const data = await dbService.getTopics();
+        if (isMounted) {
+          setTopics(data);
+        }
+      } catch (err) {
+        console.error('Failed to load official topics for landing page:', err);
+      } finally {
+        if (isMounted) {
+          setLoadingTopics(false);
+        }
+      }
+    };
+
+    fetchOfficialTopics();
+    return () => {
+      isMounted = false;
+    };
+  }, [initialTopics]);
 
   const handleCopyEmail = () => {
     navigator.clipboard.writeText(contactEmail);
@@ -158,8 +174,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
             <span>Zero-Retention Privacy</span>
           </div>
           <div className="py-1 px-3 rounded-full bg-slate-900/80 border border-slate-800 flex items-center gap-1.5">
-            <Globe className="w-3.5 h-3.5 text-amber-400" />
-            <span>Strict Bilingual (ID/EN)</span>
+            <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+            <span>Audio Bahasa Indonesia Natural</span>
           </div>
         </div>
 
@@ -173,7 +189,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
               <div className="space-y-4 max-w-lg">
                 <div className="inline-flex items-center gap-2 py-1 px-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>3D Mentor Online: Nimbus-42 (Cloud Computing)</span>
+                  <span>
+                    3D Mentor Online: {topics[0]?.character_name || 'AI Mentor'} ({topics[0]?.title || 'Kurikulum Resmi'})
+                  </span>
                 </div>
 
                 <h3 className="text-xl sm:text-2xl font-bold text-white">
@@ -187,7 +205,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
                 <div className="p-3 rounded-xl bg-slate-900/90 border border-cyan-500/30 text-xs text-slate-300 flex items-center gap-3">
                   <Volume2 className="w-5 h-5 text-cyan-400 shrink-0 animate-pulse" />
                   <p className="italic font-mono text-[11px] text-cyan-200">
-                    "Halo! Saya Nimbus-42. AI ini dapat membuat kesalahan. Mari kita bedah arsitektur komputasi awan skala global!"
+                    "{topics[0]?.character_greeting || 'Halo! Saya mentor virtual AI Anda. Mari kita mulai belajar teknologi di ruang 3D!'}"
                   </p>
                 </div>
               </div>
@@ -199,7 +217,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
                   <Bot className="w-12 h-12 text-cyan-400" />
                 </div>
                 <span className="absolute bottom-3 py-0.5 px-2.5 rounded-full bg-slate-900 border border-slate-700 text-[10px] font-mono font-bold text-cyan-300">
-                  Holo-Sage
+                  {topics[0]?.character_avatar_type ? topics[0].character_avatar_type.replace('_', ' ').toUpperCase() : 'HOLO-SAGE'}
                 </span>
               </div>
             </div>
@@ -207,7 +225,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
         </div>
       </section>
 
-      {/* Prominent Demo Access Information Section (Requested by User) */}
+      {/* Prominent Demo Access Information Section */}
       <section id="demo-access" className="py-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto scroll-mt-20">
         <div className="rounded-3xl p-1 bg-gradient-to-r from-amber-500/40 via-orange-500/30 to-cyan-500/40 shadow-2xl shadow-amber-950/40">
           <div className="rounded-[22px] bg-slate-900/95 border border-slate-800 p-6 sm:p-10 text-center relative overflow-hidden">
@@ -302,7 +320,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
             </div>
             <h3 className="text-base font-bold text-white mb-1.5">1 Mentor 3D Khusus per Topik</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Setiap materi memiliki 1 Karakter 3D unik dengan tipe model avatar, warna neon, gaya persona, dan modulasi suara sintetis tersendiri.
+              Setiap modul memiliki 1 Karakter 3D unik dengan tipe model avatar, warna neon, gaya persona, dan modulasi suara sintetis tersendiri.
             </p>
           </div>
 
@@ -342,22 +360,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
           {/* Feature 6 */}
           <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-amber-500/40 transition-all shadow-lg hover:shadow-amber-950/20 group">
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4 group-hover:scale-110 transition-transform">
-              <Globe className="w-5 h-5" />
+              <Volume2 className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-white mb-1.5">Bilingual Terkunci (ID / EN)</h3>
+            <h3 className="text-base font-bold text-white mb-1.5">Audio Bahasa Indonesia Natural</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Bebas dari bahasa yang tidak didukung. Terfokus penuh pada Bahasa Indonesia dan English untuk menjamin kejelasan artikulasi audio dan akurasi materi.
+              Dioptimalkan khusus dalam Bahasa Indonesia berdefinisi tinggi, baik artikulasi suara Text-to-Speech maupun responsivitas pengenalan suara Speech Recognition.
             </p>
           </div>
         </div>
       </section>
 
-      {/* 11 Modules Grid Showcase */}
+      {/* Modul Grid Showcase (Official Live Supabase Data) */}
       <section id="modules" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto scroll-mt-20">
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-cyan-400 uppercase tracking-widest mb-2">
             <Layers className="w-3.5 h-3.5" />
-            <span>Kurikulum Komprehensif</span>
+            <span>Kurikulum Resmi & Terstruktur</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
             {t.modulesTitle}
@@ -367,35 +385,67 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {MODULES_SHOWCASE.map((m) => (
-            <div
-              key={m.id}
-              onClick={onOpenLogin}
-              className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-cyan-500/40 transition-all flex items-center justify-between gap-3 group cursor-pointer hover:bg-slate-900"
-            >
-              <div className="flex items-center gap-3 truncate">
-                <span
-                  className="w-3 h-3 rounded-full shrink-0 shadow-sm"
-                  style={{ backgroundColor: m.color }}
-                />
-                <div className="truncate">
-                  <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
-                    Modul #{m.id} • {m.tag}
-                  </div>
-                  <h4 className="text-xs font-bold text-slate-100 truncate group-hover:text-cyan-300 transition-colors">
-                    {m.title}
-                  </h4>
-                  <div className="text-[11px] text-cyan-400 font-medium">
-                    Mentor: {m.mentor}
+        {loadingTopics && topics.length === 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="p-4 rounded-2xl bg-slate-900/40 border border-slate-800 animate-pulse flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3 w-full">
+                  <div className="w-3.5 h-3.5 rounded-full bg-slate-800 shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-2.5 bg-slate-800 rounded w-1/3" />
+                    <div className="h-3.5 bg-slate-800 rounded w-4/5" />
+                    <div className="h-2.5 bg-slate-800 rounded w-1/2" />
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+        ) : topics.length === 0 ? (
+          <div className="text-center py-12 text-slate-500 text-xs">
+            Belum ada modul pembelajaran yang terdaftar di database.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {topics.map((topic) => (
+              <div
+                key={topic.id}
+                onClick={onOpenLogin}
+                className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-cyan-500/40 transition-all flex items-center justify-between gap-3 group cursor-pointer hover:bg-slate-900 shadow-md hover:shadow-cyan-950/20"
+              >
+                <div className="flex items-center gap-3 truncate">
+                  <span
+                    className="w-3 h-3 rounded-full shrink-0 shadow-sm transition-transform group-hover:scale-125"
+                    style={{ backgroundColor: topic.character_primary_color }}
+                  />
+                  <div className="truncate">
+                    <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="text-cyan-400 font-bold">Modul #{topic.order_index}</span>
+                      <span>•</span>
+                      <span className="capitalize">{topic.character_avatar_type.replace('_', ' ')}</span>
+                    </div>
+                    <h4 className="text-xs font-bold text-slate-100 truncate group-hover:text-cyan-300 transition-colors mt-0.5">
+                      {topic.title}
+                    </h4>
+                    <div className="text-[11px] text-cyan-400 font-medium flex items-center gap-1 mt-0.5">
+                      <span className="text-slate-400">Mentor:</span>
+                      <span className="font-semibold text-slate-200">{topic.character_name}</span>
+                    </div>
+                    {topic.description && (
+                      <p className="text-[10px] text-slate-400 truncate mt-0.5 max-w-[240px] sm:max-w-[280px]">
+                        {topic.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
 
-              <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all shrink-0" />
-            </div>
-          ))}
-        </div>
+                <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all shrink-0" />
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Footer */}
@@ -426,4 +476,3 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
     </div>
   );
 };
-

@@ -91,7 +91,7 @@ const AppContent: React.FC = () => {
   if (!currentUser) {
     return (
       <>
-        <LandingPage onOpenLogin={() => setShowLoginModal(true)} />
+        <LandingPage topics={topics} onOpenLogin={() => setShowLoginModal(true)} />
         {showLoginModal && (
           <div className="fixed inset-0 z-50 overflow-y-auto">
             <LoginModal
