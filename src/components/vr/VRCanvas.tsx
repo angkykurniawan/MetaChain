@@ -7,6 +7,9 @@ import { HologramHUD } from './HologramHUD';
 import { speechEngine } from '../../lib/speechEngine';
 import { generateAIAnswer } from '../../lib/characterGen';
 import { queryActiveLLMMentor, getActiveAIConfig, PROVIDER_PRESETS } from '../../lib/aiProvider';
+import { useLanguage } from '../../lib/i18n';
+import { LanguageToggle } from '../common/LanguageToggle';
+import { ThemeToggle } from '../common/ThemeToggle';
 import { Glasses, LogOut, Compass } from 'lucide-react';
 
 interface VRCanvasProps {
@@ -20,6 +23,7 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
   topics,
   onLogout
 }) => {
+  const { lang, t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeTopic, setActiveTopic] = useState<Topic>(topics[0]);
   const [messages, setMessages] = useState<EphemeralChatMessage[]>([]);
@@ -111,9 +115,42 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
       isDragging = false;
     };
 
+    // Mobile Touch Orbit Controls
+    const onTouchStart = (e: TouchEvent) => {
+      if ((e.target as HTMLElement).closest('.hud-overlay')) return;
+      if (e.touches.length === 1) {
+        isDragging = true;
+        prevMouseX = e.touches[0].clientX;
+        prevMouseY = e.touches[0].clientY;
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isDragging || e.touches.length !== 1) return;
+      const deltaX = e.touches[0].clientX - prevMouseX;
+      const deltaY = e.touches[0].clientY - prevMouseY;
+      prevMouseX = e.touches[0].clientX;
+      prevMouseY = e.touches[0].clientY;
+
+      sphericalTheta -= deltaX * 0.007;
+      sphericalPhi = Math.max(0.2, Math.min(Math.PI / 2 + 0.3, sphericalPhi - deltaY * 0.007));
+
+      camera.position.x = radius * Math.sin(sphericalPhi) * Math.sin(sphericalTheta);
+      camera.position.y = 1.4 + radius * Math.cos(sphericalPhi);
+      camera.position.z = radius * Math.sin(sphericalPhi) * Math.cos(sphericalTheta);
+      camera.lookAt(0, 1.4, 0);
+    };
+
+    const onTouchEnd = () => {
+      isDragging = false;
+    };
+
     window.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
 
     // Render loop
     const clock = new THREE.Clock();
@@ -141,6 +178,9 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
       window.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
       window.removeEventListener('resize', handleResize);
       env.dispose();
       renderer.dispose();
@@ -181,6 +221,7 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
       setIsMentorSpeaking(true);
       speechEngine.speak({
         text: activeTopic.character_greeting,
+        lang: lang,
         pitch: activeTopic.character_voice_pitch,
         rate: activeTopic.character_voice_rate,
         onEnd: () => setIsMentorSpeaking(false),
@@ -190,7 +231,7 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
 
     // Clear previous chat on topic switch (Zero-Retention Policy)
     setMessages([]);
-  }, [activeTopic]);
+  }, [activeTopic, lang]);
 
   // Handle User sending question via Voice or Text
   const handleSendMessage = async (text: string) => {
@@ -204,8 +245,8 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
     setMessages((prev) => [...prev, userMsg]);
 
     // Generate fallback heuristic answer, then query chosen AI Provider (Google, OpenAI, Claude, DeepSeek)
-    const offlineAnswer = generateAIAnswer(activeTopic, text);
-    const answer = await queryActiveLLMMentor(activeTopic, text, offlineAnswer);
+    const offlineAnswer = generateAIAnswer(activeTopic, text, lang);
+    const answer = await queryActiveLLMMentor(activeTopic, text, offlineAnswer, lang);
 
     const mentorMsg: EphemeralChatMessage = {
       id: `msg-${Date.now() + 1}`,
@@ -219,6 +260,7 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
     setIsMentorSpeaking(true);
     speechEngine.speak({
       text: answer,
+      lang: lang,
       pitch: activeTopic.character_voice_pitch,
       rate: activeTopic.character_voice_rate,
       onEnd: () => setIsMentorSpeaking(false),
@@ -249,29 +291,32 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
       <div ref={containerRef} className="absolute inset-0 z-0" />
 
       {/* Top Floating Control Bar */}
-      <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none hud-overlay">
+      <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-20 flex items-center justify-between pointer-events-none hud-overlay gap-2">
         {/* User Pill */}
-        <div className="py-1.5 px-3.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/80 text-xs font-semibold text-slate-200 pointer-events-auto flex items-center gap-2 shadow-lg">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>{currentUser.full_name}</span>
-          <span className="text-[10px] text-slate-400 font-mono">({currentUser.role})</span>
+        <div className="py-1 px-2.5 sm:py-1.5 sm:px-3.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/80 text-xs font-semibold text-slate-200 pointer-events-auto flex items-center gap-1.5 sm:gap-2 shadow-lg max-w-[130px] xs:max-w-[160px] sm:max-w-none truncate">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+          <span className="truncate">{currentUser.full_name}</span>
+          <span className="text-[10px] text-slate-400 font-mono hidden md:inline">({currentUser.role})</span>
         </div>
 
         {/* Center: WebXR / Orbit Controls Status */}
-        <div className="hidden sm:flex items-center gap-2 py-1.5 px-3 rounded-full bg-slate-900/60 backdrop-blur-md border border-slate-800 text-[11px] text-slate-400">
+        <div className="hidden lg:flex items-center gap-2 py-1.5 px-3 rounded-full bg-slate-900/60 backdrop-blur-md border border-slate-800 text-[11px] text-slate-400">
           <Compass className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Gunakan mouse drag untuk rotasi kamera 360°</span>
+          <span>{t.orbitHint}</span>
         </div>
 
-        {/* Action Buttons: Enter VR & Logout */}
-        <div className="flex items-center gap-2 pointer-events-auto">
+        {/* Action Buttons: Theme Toggle, Language Switcher, Enter VR & Logout */}
+        <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+          <ThemeToggle />
+          <LanguageToggle />
+
           {isVRAvailable && (
             <button
               onClick={handleEnterVR}
-              className="py-1.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/25 transition-all cursor-pointer"
+              className="py-1 px-2.5 sm:py-1.5 sm:px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 sm:gap-2 shadow-lg shadow-cyan-500/25 transition-all cursor-pointer"
             >
-              <Glasses className="w-4 h-4" />
-              <span>{isInVR ? 'Sedang di VR' : 'Enter WebXR VR'}</span>
+              <Glasses className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span>{isInVR ? t.inVRStatus : t.enterVRBtn}</span>
             </button>
           )}
 
@@ -280,16 +325,17 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
               speechEngine.stopSpeaking();
               onLogout();
             }}
-            className="py-1.5 px-3 rounded-xl bg-slate-900/80 hover:bg-red-950/60 border border-slate-700 hover:border-red-500/50 text-slate-300 hover:text-red-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-lg"
+            className="py-1 px-2 sm:py-1.5 sm:px-3 rounded-xl bg-slate-900/80 hover:bg-red-950/60 border border-slate-700 hover:border-red-500/50 text-slate-300 hover:text-red-300 text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer shadow-lg"
+            title={t.logout}
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>Keluar</span>
+            <span className="hidden xs:inline">{t.logout}</span>
           </button>
         </div>
       </div>
 
       {/* Floating Spatial Hologram HUD (Positioned in VR Space) */}
-      <div className="absolute bottom-4 left-4 sm:left-6 z-20 pointer-events-auto hud-overlay">
+      <div className="absolute bottom-2 sm:bottom-4 left-2 right-2 sm:right-auto sm:left-6 z-20 pointer-events-auto hud-overlay flex justify-center sm:justify-start">
         <HologramHUD
           currentTopic={activeTopic}
           allTopics={topics}

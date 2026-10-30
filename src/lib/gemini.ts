@@ -1,4 +1,5 @@
 import { Topic } from '../types/index';
+import { isBasicGreeting, isIdentityInquiry, isOutOfContext } from './characterGen';
 
 // Check API Key from Environment variable or Local Storage (configured via Admin Panel)
 export function getGeminiApiKey(): string {
@@ -24,6 +25,11 @@ export async function queryGeminiMentor(
 ): Promise<string> {
   const apiKey = getGeminiApiKey();
 
+  // Guardrail check: greetings, identity, or out-of-context
+  if (isBasicGreeting(userQuestion) || isIdentityInquiry(userQuestion) || isOutOfContext(userQuestion, topic)) {
+    return offlineFallbackAnswer;
+  }
+
   // If no Gemini API Key is configured, use the smart local offline engine
   if (!apiKey) {
     return offlineFallbackAnswer;
@@ -32,8 +38,17 @@ export async function queryGeminiMentor(
   const systemInstruction = `
 Kamu adalah ${topic.character_name}, seorang 3D AI Mentor untuk topik "${topic.title}" di akademi virtual MetaChain WebXR.
 Persona kamu: ${topic.character_persona}.
+Konteks: Kamu HANYA mengajar materi "${topic.title}".
+
+BATASAN RUANG LINGKUP MUTLAK:
+- Kamu DILARANG KERAS menjawab pertanyaan di luar topik "${topic.title}".
+- Jika pengguna bertanya di luar topik "${topic.title}" (seperti resep masakan, politik, artis, olahraga, kesehatan, dll), kamu WAJIB menolak dengan sopan:
+  "Maaf, pertanyaan tersebut di luar tugas dan konteks materi \"${topic.title}\". Sebagai mentor khusus materi ini, saya hanya dapat menjawab pertanyaan yang berkaitan langsung dengan ${topic.title}. Silakan ajukan pertanyaan seputar ${topic.title}!"
+- PENGECUALIAN UNTUK SAPAAN & IDENTITAS DASAR:
+  Jika pengguna menyapa ("halo", "hai", "selamat pagi") atau menanyakan identitasmu ("siapa kamu", "siapa anda"), jawab dengan ramah, perkenalkan dirimu sebagai ${topic.character_name} mentor materi ${topic.title}, dan ajak mereka mempelajari ${topic.title}.
+
 Gaya bicara: Informatif, edukatif, bersahabat, ringkas (maksimal 3-4 kalimat padat), dan cocok untuk didengarkan via suara (Text-to-Speech).
-PENTING: Selalu ingat bahwa penjelasanmu adalah perspektif/tanggapan pribadi pengajar, bukan standar mutlak industri atau saran finansial. Jawab dalam Bahasa Indonesia.
+PENTING: Selalu ingat bahwa AI ini dapat membuat kesalahan. Jawab dengan ramah, jelas, dan edukatif dalam Bahasa Indonesia.
 `.trim();
 
   try {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { speechEngine } from '../../lib/speechEngine';
-import { Mic, MicOff, Send, Sparkles } from 'lucide-react';
+import { useLanguage } from '../../lib/i18n';
+import { Mic, Send, Sparkles } from 'lucide-react';
 
 interface VoiceChatBarProps {
   topicTitle: string;
@@ -13,6 +14,7 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
   isMentorSpeaking,
   onSendMessage
 }) => {
+  const { lang, t } = useLanguage();
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
@@ -23,6 +25,7 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
       setIsListening(false);
     } else {
       setSpeechError(null);
+      // Strictly pass the active language ('id' or 'en') for voice recognition
       speechEngine.startListening(
         (transcript) => {
           if (transcript.trim()) {
@@ -30,7 +33,8 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
           }
         },
         (listening) => setIsListening(listening),
-        (error) => setSpeechError(error)
+        (error) => setSpeechError(error),
+        lang
       );
     }
   };
@@ -46,11 +50,16 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
     onSendMessage(prompt);
   };
 
-  const quickPrompts = [
+  const quickPrompts = lang === 'en' ? [
+    `What is ${topicTitle}?`,
+    `How does it work?`,
+    `What are the key benefits?`,
+    `Beginner roadmap?`
+  ] : [
     `Apa itu ${topicTitle}?`,
     `Bagaimana cara kerjanya?`,
     `Apa manfaat terbesarnya?`,
-    `Roadmap belajar untuk pemula?`
+    `Roadmap untuk pemula?`
   ];
 
   return (
@@ -81,7 +90,11 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
               ? 'bg-red-500/20 border-red-500 text-red-400 shadow-lg shadow-red-500/30 animate-pulse'
               : 'bg-slate-900/80 border-slate-700 hover:border-cyan-400 text-slate-300 hover:text-cyan-400'
           }`}
-          title={isListening ? 'Berhenti mendengarkan' : 'Bicara lewat Mikrofon (Web Speech)'}
+          title={
+            isListening
+              ? (lang === 'en' ? 'Stop listening' : 'Berhenti mendengarkan')
+              : (lang === 'en' ? 'Speak with Microphone (Voice Input)' : 'Bicara lewat Mikrofon (Input Suara)')
+          }
         >
           {isListening ? <Mic className="w-5 h-5 text-red-400" /> : <Mic className="w-5 h-5" />}
           {isListening && (
@@ -97,10 +110,10 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
             onChange={(e) => setInputText(e.target.value)}
             placeholder={
               isListening
-                ? 'Mendengarkan suara Anda...'
+                ? t.listeningStatus
                 : isMentorSpeaking
-                ? 'Mentor sedang berbicara...'
-                : `Tanyakan sesuatu seputar ${topicTitle}...`
+                ? t.mentorSpeakingStatus
+                : (lang === 'en' ? `Ask anything about ${topicTitle}...` : `Tanyakan sesuatu seputar ${topicTitle}...`)
             }
             className="w-full pl-4 pr-10 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 focus:border-cyan-400 focus:outline-none text-slate-100 text-xs placeholder:text-slate-500"
           />
@@ -111,6 +124,7 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
           type="submit"
           disabled={!inputText.trim()}
           className="p-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 text-slate-950 font-bold transition-all shadow-md shadow-cyan-500/20 cursor-pointer shrink-0"
+          title={lang === 'en' ? 'Send text question' : 'Kirim pertanyaan teks'}
         >
           <Send className="w-4 h-4" />
         </button>
@@ -119,10 +133,9 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
       {/* Status banner */}
       {speechError && (
         <div className="text-[10px] text-red-400 px-2">
-          Mic status: {speechError} (Gunakan input teks di samping).
+          Mic status: {speechError} ({lang === 'en' ? 'Please use text input' : 'Gunakan input teks di samping'}).
         </div>
       )}
     </div>
   );
 };
-
