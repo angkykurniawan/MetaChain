@@ -20,6 +20,42 @@ export const supabase = isLiveSupabase
   : null;
 
 // ==========================================
+// AUTHENTICATED SESSION PERSISTENCE
+// ==========================================
+const SESSION_STORAGE_KEY = 'metachain_authenticated_user_session_v1';
+
+export function getStoredSession(): Profile | null {
+  try {
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (raw) {
+      const user = JSON.parse(raw);
+      if (user && user.id && user.username && user.role) {
+        return user as Profile;
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to parse stored session:', err);
+  }
+  return null;
+}
+
+export function saveSession(user: Profile): void {
+  try {
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
+  } catch (err) {
+    console.error('Failed to save session:', err);
+  }
+}
+
+export function clearSession(): void {
+  try {
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch (err) {
+    console.error('Failed to clear session:', err);
+  }
+}
+
+// ==========================================
 // LOCAL STORAGE ADAPTER (Instant Offline / Demo Mode)
 // ==========================================
 const STORAGE_KEYS = {

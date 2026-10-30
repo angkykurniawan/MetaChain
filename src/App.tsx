@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Profile, Topic } from './types';
-import { dbService } from './lib/supabase';
+import { dbService, getStoredSession, saveSession, clearSession } from './lib/supabase';
 import { LanguageProvider, useLanguage } from './lib/i18n';
 import { ThemeProvider } from './lib/theme';
 import { LoginModal } from './components/auth/LoginModal';
@@ -11,7 +11,8 @@ import { speechEngine } from './lib/speechEngine';
 
 const AppContent: React.FC = () => {
   const { t } = useLanguage();
-  const [currentUser, setCurrentUser] = useState<Profile | null>(null);
+  // Initialize user session directly from persistent storage
+  const [currentUser, setCurrentUser] = useState<Profile | null>(() => getStoredSession());
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [adminViewingVR, setAdminViewingVR] = useState(false);
@@ -31,9 +32,35 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     loadTopics();
+
+    // Verify stored session validity against the database
+    const verifySession = async () => {
+      const stored = getStoredSession();
+      if (stored) {
+        try {
+          const profiles = await dbService.getProfiles();
+          const fresh = profiles.find((p) => p.id === stored.id || p.username.toLowerCase() === stored.username.toLowerCase());
+          if (fresh) {
+            if (!fresh.is_active) {
+              // User has been disabled by admin
+              clearSession();
+              setCurrentUser(null);
+            } else {
+              saveSession(fresh);
+              setCurrentUser(fresh);
+            }
+          }
+        } catch (err) {
+          console.warn('Session verification fallback to stored session:', err);
+        }
+      }
+    };
+
+    verifySession();
   }, []);
 
   const handleLoginSuccess = (user: Profile) => {
+    saveSession(user);
     setCurrentUser(user);
     setAdminViewingVR(false);
     setShowLoginModal(false);
@@ -41,8 +68,9 @@ const AppContent: React.FC = () => {
   };
 
   const handleLogout = () => {
-    // Zero-Retention Policy: cancel any speaking voice and clear memory state
+    // Zero-Retention Policy: cancel any speaking voice, clear stored session & memory state
     speechEngine.stopSpeaking();
+    clearSession();
     setCurrentUser(null);
     setAdminViewingVR(false);
     setShowLoginModal(false);
