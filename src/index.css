@@ -149,3 +149,13 @@ html.light ::-webkit-scrollbar-thumb {
 html.light ::-webkit-scrollbar-thumb:hover {
   background: #0284c7;
 }
+
+/* =========================================================
+   SECURITY & ANTI-SCREENSHOT / ANTI-PRINT PROTECTION
+   ========================================================= */
+@media print {
+  html, body {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}

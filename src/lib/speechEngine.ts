@@ -121,7 +121,8 @@ class SpeechController {
   }
 
   public isVoiceInputSupported(): boolean {
-    return Boolean(this.recognition);
+    if (typeof window === 'undefined') return false;
+    return Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
   }
 
   public isSpeaking(): boolean {
@@ -261,64 +262,98 @@ class SpeechController {
     endCallback?.();
   }
 
-  public startListening(
+  public async startListening(
     onResult: (transcript: string) => void,
     onStatusChange?: (listening: boolean) => void,
     onError?: (error: string) => void,
     _lang: string = 'id'
-  ): void {
-    if (!this.recognition) {
-      onError?.('Fitur pengenalan suara (Speech Recognition) tidak didukung di browser ini.');
+  ): Promise<void> {
+    const SpeechRecognitionClass =
+      typeof window !== 'undefined'
+        ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+        : null;
+
+    if (!SpeechRecognitionClass) {
+      onError?.('not-supported');
       return;
     }
 
-    if (this.isListening) {
-      this.stopListening();
-      return;
+    // Hentikan sesi pengenalan suara sebelumnya jika ada
+    this.stopListening();
+
+    // Verifikasi izin akses mikrofon terlebih dahulu
+    // Chromium sering mengeluarkan 'network' alih-alih 'not-allowed' jika izin belum diberikan
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Lepaskan stream segera setelah izin terkonfirmasi
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (permErr: any) {
+        console.warn('Microphone permission check failed:', permErr);
+        if (permErr.name === 'NotAllowedError' || permErr.name === 'PermissionDeniedError') {
+          onError?.('not-allowed');
+        } else if (permErr.name === 'NotFoundError' || permErr.name === 'DevicesNotFoundError') {
+          onError?.('audio-capture');
+        } else {
+          onError?.('audio-capture');
+        }
+        return;
+      }
     }
-
-    this.recognition.lang = 'id-ID';
-
-    this.recognition.onstart = () => {
-      this.isListening = true;
-      onStatusChange?.(true);
-    };
-
-    this.recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      onResult(transcript);
-    };
-
-    this.recognition.onerror = (event: any) => {
-      console.warn('Speech-to-text error:', event.error);
-      this.isListening = false;
-      onStatusChange?.(false);
-      onError?.(event.error);
-    };
-
-    this.recognition.onend = () => {
-      this.isListening = false;
-      onStatusChange?.(false);
-    };
 
     try {
-      this.recognition.start();
-    } catch (err) {
-      console.error('Failed to start speech recognition:', err);
+      // Selalu buat instance baru (fresh instance) untuk mencegah sesi macet (stale connection) pada Chromium
+      const recognition = new SpeechRecognitionClass();
+      this.recognition = recognition;
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.lang = 'id-ID';
+
+      recognition.onstart = () => {
+        this.isListening = true;
+        onStatusChange?.(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results?.[0]?.[0]?.transcript;
+        if (transcript && transcript.trim()) {
+          onResult(transcript.trim());
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('Speech-to-text error:', event.error);
+        this.isListening = false;
+        onStatusChange?.(false);
+        onError?.(event.error);
+      };
+
+      recognition.onend = () => {
+        this.isListening = false;
+        onStatusChange?.(false);
+        this.recognition = null;
+      };
+
+      recognition.start();
+    } catch (err: any) {
+      console.error('Failed to start speech recognition instance:', err);
       this.isListening = false;
       onStatusChange?.(false);
+      onError?.(err?.message || 'start-failed');
     }
   }
 
   public stopListening(): void {
-    if (this.recognition && this.isListening) {
+    if (this.recognition) {
       try {
-        this.recognition.stop();
+        this.recognition.abort();
       } catch (err) {
         console.warn('Stop listening error:', err);
       }
-      this.isListening = false;
+      this.recognition = null;
     }
+    this.isListening = false;
   }
 }
 

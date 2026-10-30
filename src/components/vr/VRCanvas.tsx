@@ -9,6 +9,7 @@ import { generateAIAnswer } from '../../lib/characterGen';
 import { queryActiveLLMMentor } from '../../lib/aiProvider';
 import { useLanguage } from '../../lib/i18n';
 import { ThemeToggle } from '../common/ThemeToggle';
+import { SecurityShield } from '../common/SecurityShield';
 import { Glasses, LogOut, Compass, Square } from 'lucide-react';
 
 interface VRCanvasProps {
@@ -298,79 +299,81 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden select-none bg-slate-950">
-      {/* 3D WebGL Canvas Layer */}
-      <div ref={containerRef} className="absolute inset-0 z-0" />
+    <SecurityShield currentUser={currentUser}>
+      <div className="relative w-screen h-screen overflow-hidden select-none bg-slate-950">
+        {/* 3D WebGL Canvas Layer */}
+        <div ref={containerRef} className="absolute inset-0 z-0" />
 
-      {/* Top Floating Control Bar */}
-      <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-20 flex items-center justify-between pointer-events-none hud-overlay gap-2">
-        {/* User Pill */}
-        <div className="py-1 px-2.5 sm:py-1.5 sm:px-3.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/80 text-xs font-semibold text-slate-200 pointer-events-auto flex items-center gap-1.5 sm:gap-2 shadow-lg max-w-[130px] xs:max-w-[160px] sm:max-w-none truncate">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-          <span className="truncate">{currentUser.full_name}</span>
-          <span className="text-[10px] text-slate-400 font-mono hidden md:inline">({currentUser.role})</span>
+        {/* Top Floating Control Bar */}
+        <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-20 flex items-center justify-between pointer-events-none hud-overlay gap-2">
+          {/* User Pill */}
+          <div className="py-1 px-2.5 sm:py-1.5 sm:px-3.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/80 text-xs font-semibold text-slate-200 pointer-events-auto flex items-center gap-1.5 sm:gap-2 shadow-lg max-w-[130px] xs:max-w-[160px] sm:max-w-none truncate">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="truncate">{currentUser.full_name}</span>
+            <span className="text-[10px] text-slate-400 font-mono hidden md:inline">({currentUser.role})</span>
+          </div>
+
+          {/* Center: WebXR / Orbit Controls Status */}
+          <div className="hidden lg:flex items-center gap-2 py-1.5 px-3 rounded-full bg-slate-900/60 backdrop-blur-md border border-slate-800 text-[11px] text-slate-400">
+            <Compass className="w-3.5 h-3.5 text-cyan-400" />
+            <span>{t.orbitHint}</span>
+          </div>
+
+          {/* Action Buttons: Quick Stop Voice, Theme Toggle, Enter VR & Logout */}
+          <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+            {/* Quick Stop Voice Button if Speaking */}
+            {isMentorSpeaking && (
+              <button
+                onClick={handleStopVoice}
+                className="py-1 px-2.5 sm:py-1.5 sm:px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/60 text-rose-300 text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-rose-950/40 transition-all cursor-pointer animate-pulse"
+                title="Hentikan Suara yang Menjawab"
+              >
+                <Square className="w-3.5 h-3.5 fill-current text-rose-400" />
+                <span className="hidden xs:inline">Hentikan Suara</span>
+              </button>
+            )}
+
+            <ThemeToggle />
+
+            {isVRAvailable && (
+              <button
+                onClick={handleEnterVR}
+                className="py-1 px-2.5 sm:py-1.5 sm:px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 sm:gap-2 shadow-lg shadow-cyan-500/25 transition-all cursor-pointer"
+              >
+                <Glasses className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>{isInVR ? t.inVRStatus : t.enterVRBtn}</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                speechEngine.stopSpeaking();
+                onLogout();
+              }}
+              className="py-1 px-2 sm:py-1.5 sm:px-3 rounded-xl bg-slate-900/80 hover:bg-red-950/60 border border-slate-700 hover:border-red-500/50 text-slate-300 hover:text-red-300 text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer shadow-lg"
+              title={t.logout}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden xs:inline">{t.logout}</span>
+            </button>
+          </div>
         </div>
 
-        {/* Center: WebXR / Orbit Controls Status */}
-        <div className="hidden lg:flex items-center gap-2 py-1.5 px-3 rounded-full bg-slate-900/60 backdrop-blur-md border border-slate-800 text-[11px] text-slate-400">
-          <Compass className="w-3.5 h-3.5 text-cyan-400" />
-          <span>{t.orbitHint}</span>
-        </div>
-
-        {/* Action Buttons: Quick Stop Voice, Theme Toggle, Enter VR & Logout */}
-        <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
-          {/* Quick Stop Voice Button if Speaking */}
-          {isMentorSpeaking && (
-            <button
-              onClick={handleStopVoice}
-              className="py-1 px-2.5 sm:py-1.5 sm:px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/60 text-rose-300 text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-rose-950/40 transition-all cursor-pointer animate-pulse"
-              title="Hentikan Suara yang Menjawab"
-            >
-              <Square className="w-3.5 h-3.5 fill-current text-rose-400" />
-              <span className="hidden xs:inline">Hentikan Suara</span>
-            </button>
-          )}
-
-          <ThemeToggle />
-
-          {isVRAvailable && (
-            <button
-              onClick={handleEnterVR}
-              className="py-1 px-2.5 sm:py-1.5 sm:px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 sm:gap-2 shadow-lg shadow-cyan-500/25 transition-all cursor-pointer"
-            >
-              <Glasses className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>{isInVR ? t.inVRStatus : t.enterVRBtn}</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => {
-              speechEngine.stopSpeaking();
-              onLogout();
-            }}
-            className="py-1 px-2 sm:py-1.5 sm:px-3 rounded-xl bg-slate-900/80 hover:bg-red-950/60 border border-slate-700 hover:border-red-500/50 text-slate-300 hover:text-red-300 text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer shadow-lg"
-            title={t.logout}
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">{t.logout}</span>
-          </button>
+        {/* Floating Spatial Hologram HUD (Positioned in VR Space) */}
+        <div className="absolute bottom-2 sm:bottom-4 left-2 right-2 sm:right-auto sm:left-6 z-20 pointer-events-auto hud-overlay flex justify-center sm:justify-start">
+          <HologramHUD
+            currentTopic={activeTopic}
+            allTopics={topics}
+            onSelectTopic={(t) => setActiveTopic(t)}
+            messages={messages}
+            isMentorSpeaking={isMentorSpeaking}
+            onSendMessage={handleSendMessage}
+            onStopVoice={handleStopVoice}
+            onSpeakText={handleSpeakText}
+            activeSpeakingId={activeSpeakingId}
+          />
         </div>
       </div>
-
-      {/* Floating Spatial Hologram HUD (Positioned in VR Space) */}
-      <div className="absolute bottom-2 sm:bottom-4 left-2 right-2 sm:right-auto sm:left-6 z-20 pointer-events-auto hud-overlay flex justify-center sm:justify-start">
-        <HologramHUD
-          currentTopic={activeTopic}
-          allTopics={topics}
-          onSelectTopic={(t) => setActiveTopic(t)}
-          messages={messages}
-          isMentorSpeaking={isMentorSpeaking}
-          onSendMessage={handleSendMessage}
-          onStopVoice={handleStopVoice}
-          onSpeakText={handleSpeakText}
-          activeSpeakingId={activeSpeakingId}
-        />
-      </div>
-    </div>
+    </SecurityShield>
   );
 };

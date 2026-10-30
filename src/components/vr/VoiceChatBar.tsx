@@ -31,21 +31,49 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
     }
   }, [speechError]);
 
-  const getFriendlySpeechError = (err: string) => {
+  const getFriendlySpeechError = (err: string): { title: string; solution: string } | null => {
+    const isBrave = typeof navigator !== 'undefined' && Boolean((navigator as any).brave);
+
     switch (err) {
       case 'network':
-        return 'Server pengenal suara Google tidak dapat dijangkau (kendala koneksi / firewall browser). Silakan ketik pertanyaan di kolom teks.';
+        if (isBrave) {
+          return {
+            title: 'Brave Browser Memblokir Layanan Suara Google',
+            solution: 'Buka pengaturan Brave di brave://settings/privacy lalu aktifkan "Gunakan layanan Google untuk pengenalan ucapan" (Use Google services for speech recognition), lalu muat ulang halaman.'
+          };
+        }
+        return {
+          title: 'Koneksi ke Server Pengenal Suara Google Terkendala',
+          solution: 'Web Speech API pada Chrome memerlukan koneksi ke server Google Cloud. Periksa koneksi internet/firewall, atau gunakan kolom ketik teks di samping untuk bertanya secara lancar.'
+        };
       case 'not-allowed':
       case 'service-not-allowed':
-        return 'Akses mikrofon belum diizinkan. Harap izinkan mikrofon di pengaturan peramban (ikon gembok di address bar).';
+        return {
+          title: 'Izin Akses Mikrofon Ditolak',
+          solution: 'Klik ikon gembok / slider di sebelah kiri URL browser (address bar), lalu ubah izin Mikrofon menjadi "Izinkan" (Allow).'
+        };
       case 'audio-capture':
-        return 'Mikrofon tidak ditemukan atau sedang digunakan oleh aplikasi lain.';
+        return {
+          title: 'Mikrofon Tidak Ditemukan',
+          solution: 'Perangkat mikrofon tidak terdeteksi atau sedang dikunci oleh aplikasi lain (seperti Zoom/Meet).'
+        };
       case 'no-speech':
-        return 'Tidak ada suara yang terdeteksi. Silakan coba bicara kembali atau gunakan input teks.';
+        return {
+          title: 'Tidak Ada Suara Terdeteksi',
+          solution: 'Waktu bicara habis tanpa suara terdeteksi. Silakan klik mikrofon kembali dan mulailah berbicara.'
+        };
+      case 'not-supported':
+        return {
+          title: 'Peramban Tidak Mendukung Input Suara',
+          solution: 'Gunakan Google Chrome atau Microsoft Edge versi terbaru, atau gunakan kolom input teks.'
+        };
       case 'aborted':
         return null;
       default:
-        return `Pengenalan suara mengalami kendala (${err}). Silakan gunakan input teks di samping.`;
+        return {
+          title: `Pengenalan Suara Mengalami Kendala (${err})`,
+          solution: 'Silakan gunakan kolom teks di samping atau pilih salah satu tombol saran cepat di atas.'
+        };
     }
   };
 
@@ -175,15 +203,18 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
 
       {/* Friendly Status banner */}
       {friendlyError && (
-        <div className="text-[11px] text-amber-300 bg-amber-950/40 border border-amber-500/40 rounded-xl px-3 py-1.5 flex items-center justify-between gap-2 shadow-sm">
-          <div className="flex items-center gap-1.5 truncate">
-            <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            <span className="truncate">{friendlyError}</span>
+        <div className="text-[11px] text-amber-200 bg-amber-950/80 border border-amber-500/50 rounded-xl p-3 flex items-start justify-between gap-2 shadow-lg backdrop-blur-md">
+          <div className="flex items-start gap-2 flex-1">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <p className="font-bold text-amber-300">{friendlyError.title}</p>
+              <p className="text-[10px] text-amber-200/90 leading-relaxed">{friendlyError.solution}</p>
+            </div>
           </div>
           <button
             type="button"
             onClick={() => setSpeechError(null)}
-            className="p-0.5 rounded text-amber-400 hover:text-white hover:bg-amber-900/60 transition-colors cursor-pointer shrink-0"
+            className="p-1 rounded-lg text-amber-400 hover:text-white hover:bg-amber-900/60 transition-colors cursor-pointer shrink-0"
             title="Tutup pesan"
           >
             <X className="w-3.5 h-3.5" />

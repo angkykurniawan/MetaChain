@@ -19,7 +19,8 @@ import {
   Cpu,
   User,
   Sparkles,
-  Square
+  Square,
+  ShieldAlert
 } from 'lucide-react';
 
 interface HologramHUDProps {
@@ -423,6 +424,14 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
             )}
           </div>
         )}
+      </div>
+
+      {/* Security Protection Notice Banner */}
+      <div className="p-2 sm:p-2.5 mb-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-[10px] sm:text-[11px] text-rose-300 flex items-center gap-1.5 shadow-sm">
+        <ShieldAlert className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+        <span className="font-semibold leading-snug">
+          ⚠️ KONTEN DILINDUNGI SISTEM KEAMANAN (ANTI-SCREENSHOT &amp; RECORDING)
+        </span>
       </div>
 
       {/* Mandatory Disclaimer Box */}
