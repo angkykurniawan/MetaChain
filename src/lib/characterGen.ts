@@ -200,18 +200,18 @@ export function generateAIAnswer(topic: Topic, userQuestion: string, lang: 'id' 
   const name = topic.character_name;
   const title = topic.title;
 
-  // 1. Basic Greeting Handler
+  // 1. Basic Greeting Handler (Hanya menyapa, TIDAK memperkenalkan nama kecuali ditanya)
   if (isBasicGreeting(q)) {
     if (lang === 'en') {
-      return `Hello! I am ${name}, your 3D AI Mentor for "${title}". How can I assist you with your exploration of ${title} today?`;
+      return `Hello! How can I assist you with your learning of "${title}" today?`;
     }
-    return `Halo! Saya adalah ${name}, 3D AI Mentor Anda untuk materi "${title}". Ada konsep atau topik spesifik seputar ${title} yang ingin Anda pelajari hari ini?`;
+    return `Halo! Ada konsep atau topik spesifik seputar "${title}" yang ingin Anda diskusikan atau tanyakan hari ini?`;
   }
 
-  // 2. Identity Inquiry Handler
+  // 2. Identity Inquiry Handler (HANYA KETIKA DITANYA identitas seperti "siapa kamu", "siapa anda", "who are you")
   if (isIdentityInquiry(q)) {
     if (lang === 'en') {
-      return `I am ${name}, the dedicated 3D AI Mentor for "${title}" at MetaChain WebXR Academy. Persona: ${topic.character_persona}. My duty is strictly to guide you through ${title}.`;
+      return `I am ${name}, the dedicated 3D AI Mentor for "${title}" at MetaChain WebXR Academy. Persona: ${topic.character_persona}. My duty is to guide you through ${title}.`;
     }
     return `Saya adalah ${name}, 3D AI Mentor khusus untuk materi "${title}" di MetaChain WebXR Academy. Persona saya: ${topic.character_persona}. Tugas utama saya adalah mendampingi Anda memahami materi ${title} dari tingkat dasar hingga mahir.`;
   }
@@ -224,16 +224,16 @@ export function generateAIAnswer(topic: Topic, userQuestion: string, lang: 'id' 
     return `Maaf, pertanyaan tersebut di luar tugas dan konteks materi "${title}". Sebagai mentor khusus materi ini, saya hanya dapat menjawab pertanyaan yang berkaitan langsung dengan ${title}. Silakan ajukan pertanyaan seputar ${title}!`;
   }
 
-  // 4. Topic Domain Educational Responses
+  // 4. Topic Domain Educational Responses (Langsung ke jawaban materi, tanpa menyebut nama agent)
   if (lang === 'en') {
     if (q.includes('what is') || q.includes('explain') || q.includes('definition')) {
-      return `Welcome! I am ${name}. Remember that AI can make mistakes, but in concept, ${title} is centered on ${topic.description.toLowerCase()}. The core key is grasping its structural architecture and how data exchanges reliably. Which part would you like to explore deeper?`;
+      return `AI can make mistakes, but in concept, ${title} is centered on ${topic.description.toLowerCase()}. The core key is grasping its structural architecture and how data exchanges reliably. Which part would you like to explore deeper?`;
     }
     if (q.includes('benefit') || q.includes('advantage') || q.includes('why')) {
       return `Keep in mind that AI can make mistakes, but the paramount advantage of ${title} lies in scalability, system resilience, and minimizing operational friction in high-throughput environments. Without it, modern large-scale applications experience critical bottlenecks.`;
     }
     if (q.includes('roadmap') || q.includes('start') || q.includes('learn') || q.includes('beginner')) {
-      return `My advice as ${name} (note that AI can make mistakes): Do not rush into complex frameworks right away! Master the foundational protocols first: understand data flows and state management, then construct a minimal proof-of-concept project locally.`;
+      return `Practical roadmap advice (note that AI can make mistakes): Do not rush into complex frameworks right away! Master the foundational protocols first: understand data flows and state management, then construct a minimal proof-of-concept project locally.`;
     }
     if (q.includes('challenge') || q.includes('drawback') || q.includes('risk')) {
       return `Every technology entails trade-offs. In ${title}, the biggest hurdles typically involve the learning curve, security posture validation, and infrastructure overhead if not architected cleanly from the outset.`;
@@ -241,9 +241,9 @@ export function generateAIAnswer(topic: Topic, userQuestion: string, lang: 'id' 
     return `That is an interesting question regarding ${title}! Note that AI can make mistakes, but the core concept relates directly to ${topic.character_persona.split(',')[0]}. Feel free to ask more specific questions about ${title}!`;
   }
 
-  // Indonesian responses
+  // Indonesian responses (Langsung ke jawaban materi, tanpa menyebut nama agent)
   if (q.includes('apa itu') || q.includes('jelaskan') || q.includes('pengertian')) {
-    return `${topic.character_greeting} AI ini dapat membuat kesalahan, namun secara prinsip, ${title} adalah fondasi penting yang berfokus pada ${topic.description.toLowerCase()}. Kuncinya ada pada pemahaman arsitektur dan bagaimana komponen di dalamnya saling bertukar instruksi. Ada bagian spesifik yang ingin Anda bedah lebih dalam?`;
+    return `AI ini dapat membuat kesalahan, namun secara prinsip, ${title} adalah fondasi penting yang berfokus pada ${topic.description.toLowerCase()}. Kuncinya ada pada pemahaman arsitektur dan bagaimana komponen di dalamnya saling bertukar instruksi. Ada bagian spesifik yang ingin Anda bedah lebih dalam?`;
   }
   
   if (q.includes('kelebihan') || q.includes('manfaat') || q.includes('kenapa')) {
@@ -251,7 +251,7 @@ export function generateAIAnswer(topic: Topic, userQuestion: string, lang: 'id' 
   }
 
   if (q.includes('cara belajar') || q.includes('mulai dari mana') || q.includes('roadmap')) {
-    return `Saran saya sebagai ${name} (ingat bahwa AI ini dapat membuat kesalahan): Jangan langsung loncat ke framework yang rumit! Kuasai dulu konsep dasarnya: bagaimana aliran datanya bekerja, pahami istilah intinya, lalu buatlah proyek mini untuk menguji konsep tersebut secara nyata di lingkungan lokal Anda.`;
+    return `Saran praktis (ingat bahwa AI ini dapat membuat kesalahan): Jangan langsung loncat ke framework yang rumit! Kuasai dulu konsep dasarnya: bagaimana aliran datanya bekerja, pahami istilah intinya, lalu buatlah proyek mini untuk menguji konsep tersebut secara nyata di lingkungan lokal Anda.`;
   }
 
   if (q.includes('tantangan') || q.includes('kelemahan') || q.includes('bahaya')) {

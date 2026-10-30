@@ -246,12 +246,14 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
 
     // Generate fallback heuristic answer, then query chosen AI Provider (Google, OpenAI, Claude, DeepSeek)
     const offlineAnswer = generateAIAnswer(activeTopic, text, lang);
-    const answer = await queryActiveLLMMentor(activeTopic, text, offlineAnswer, lang);
+    const result = await queryActiveLLMMentor(activeTopic, text, offlineAnswer, lang);
 
     const mentorMsg: EphemeralChatMessage = {
       id: `msg-${Date.now() + 1}`,
       sender: 'mentor',
-      text: answer,
+      text: result.text,
+      engine: result.engine,
+      aiModel: result.modelName,
       timestamp: Date.now()
     };
     setMessages((prev) => [...prev, mentorMsg]);
@@ -259,7 +261,7 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
     // Speak answer through spatial speech engine
     setIsMentorSpeaking(true);
     speechEngine.speak({
-      text: answer,
+      text: result.text,
       lang: lang,
       pitch: activeTopic.character_voice_pitch,
       rate: activeTopic.character_voice_rate,

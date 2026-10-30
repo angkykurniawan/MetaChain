@@ -180,6 +180,12 @@ export async function fetchLiveAvailableModels(
   return [];
 }
 
+export interface MentorResult {
+  text: string;
+  engine: 'ai' | 'rule_based';
+  modelName?: string;
+}
+
 /**
  * Universal Unified LLM Query Engine
  * Automatically routes the learning conversation to Google, OpenAI, Anthropic, or DeepSeek.
@@ -189,18 +195,24 @@ export async function queryActiveLLMMentor(
   userQuestion: string,
   offlineFallbackAnswer: string,
   lang: 'id' | 'en' = 'id'
-): Promise<string> {
+): Promise<MentorResult> {
   const config = getActiveAIConfig();
   const apiKey = config.apiKey.trim();
 
-  // Instant Guardrail Check: Greetings, Identity queries, or Out-of-Context queries
+  // Instant Guardrail Check: Greetings, Identity queries, or Out-of-Context queries are handled by rule-based heuristic
   if (isBasicGreeting(userQuestion) || isIdentityInquiry(userQuestion) || isOutOfContext(userQuestion, topic)) {
-    return offlineFallbackAnswer;
+    return {
+      text: offlineFallbackAnswer,
+      engine: 'rule_based'
+    };
   }
 
   // If no API key configured, use intelligent offline heuristic engine
   if (!apiKey) {
-    return offlineFallbackAnswer;
+    return {
+      text: offlineFallbackAnswer,
+      engine: 'rule_based'
+    };
   }
 
   const systemInstruction = lang === 'en'
@@ -209,12 +221,14 @@ You are ${topic.character_name}, a dedicated 3D AI Mentor for "${topic.title}" a
 Your persona: ${topic.character_persona}.
 Scope: You teach ONLY "${topic.title}".
 
+CRITICAL RULE - NO UNPROMPTED SELF-INTRODUCTION:
+- Do NOT introduce yourself or state your name (e.g. NEVER say "Hello, I am...", "I am...", "As [name]...") unless the user specifically asks who you are ("who are you", "what is your name").
+- Answer the user's technical question directly, concisely, and immediately.
+
 CRITICAL SCOPE RESTRICTION (STRICT ZERO-TOLERANCE):
 - You must NOT answer any question outside the domain of "${topic.title}".
 - If the user asks about anything outside of "${topic.title}" (e.g., cooking recipes, food, politics, celebrities, sports, medical advice, romance, general trivia), you MUST refuse without exception:
   "I apologize, but that question is outside my scope and duty for the topic \"${topic.title}\". As the dedicated mentor for this module, I can only assist with questions directly related to ${topic.title}. Please feel free to ask anything about ${topic.title}!"
-- EXCEPTION FOR BASIC GREETINGS & IDENTITY:
-  If the user asks basic greetings ("hello", "hi") or asks who you are ("who are you"), reply warmly, state you are ${topic.character_name} the mentor for ${topic.title}, and invite them to explore ${topic.title}.
 
 Tone: Highly educational, clear, articulate, warm, and concise (maximum 3-4 sentences), optimized to sound clear and natural on text-to-speech voice.
 MANDATORY: Always remember that AI can make mistakes. Provide clear, accurate pedagogical insights.
@@ -225,12 +239,14 @@ Kamu adalah ${topic.character_name}, 3D AI Mentor untuk topik "${topic.title}" d
 Persona kamu: ${topic.character_persona}.
 Konteks: Kamu HANYA mengajar materi "${topic.title}".
 
+ATURAN PENTING - JANGAN PERKENALKAN DIRI KECUALI DITANYA:
+- JANGAN memulai jawaban dengan memperkenalkan namamu (contoh: JANGAN katakan "Halo, saya...", "Perkenalkan saya...", "Sebagai [nama]...") KECUALI jika pengguna secara khusus bertanya siapa kamu ("siapa kamu", "siapa anda", "siapa namamu").
+- Jawab pertanyaan teknis pengguna secara langsung, padat, dan jelas ke inti materi.
+
 BATASAN RUANG LINGKUP MUTLAK (TANPA PENGECUALIAN):
 - Kamu DILARANG KERAS menjawab pertanyaan di luar topik "${topic.title}".
 - Jika pengguna menanyakan hal apapun di luar "${topic.title}" (contohnya: resep masakan, makanan, politik, artis, sepak bola, kesehatan/obat, percintaan, gosip, atau topik di luar ${topic.title}), kamu WAJIB menolak dengan tegas dan sopan:
   "Maaf, pertanyaan tersebut di luar tugas dan konteks materi \"${topic.title}\". Sebagai mentor khusus materi ini, saya hanya dapat menjawab pertanyaan yang berkaitan langsung dengan ${topic.title}. Silakan ajukan pertanyaan seputar ${topic.title}!"
-- PENGECUALIAN UNTUK SAPAAN & IDENTITAS DASAR:
-  Jika pengguna menyapa ("halo", "hai", "selamat pagi") atau menanyakan identitasmu ("siapa kamu", "siapa anda"), jawab dengan ramah, perkenalkan dirimu sebagai ${topic.character_name} mentor materi ${topic.title}, dan ajak mereka mempelajari ${topic.title}.
 
 Gaya bicara: Edukatif, bersahabat, sangat jelas, ringkas (maksimal 3-4 kalimat padat), dan nyaman didengarkan via suara (Text-to-Speech).
 PENTING: Selalu ingat bahwa AI ini dapat membuat kesalahan. Berikan penjelasan edukatif yang jelas dan akurat.
@@ -258,7 +274,14 @@ Jawab dengan tegas dan jelas dalam Bahasa Indonesia.
       if (!res.ok) throw new Error(`Google API error: ${res.status}`);
       const data = await res.json();
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      return text?.trim() || offlineFallbackAnswer;
+      if (text && text.trim()) {
+        return {
+          text: text.trim(),
+          engine: 'ai',
+          modelName: `Google Gemini (${model})`
+        };
+      }
+      return { text: offlineFallbackAnswer, engine: 'rule_based' };
     }
 
     // ==========================================
@@ -288,7 +311,14 @@ Jawab dengan tegas dan jelas dalam Bahasa Indonesia.
       if (!res.ok) throw new Error(`OpenAI API error: ${res.status}`);
       const data = await res.json();
       const text = data?.choices?.[0]?.message?.content;
-      return text?.trim() || offlineFallbackAnswer;
+      if (text && text.trim()) {
+        return {
+          text: text.trim(),
+          engine: 'ai',
+          modelName: `OpenAI (${model})`
+        };
+      }
+      return { text: offlineFallbackAnswer, engine: 'rule_based' };
     }
 
     // ==========================================
@@ -318,7 +348,14 @@ Jawab dengan tegas dan jelas dalam Bahasa Indonesia.
       if (!res.ok) throw new Error(`Anthropic API error: ${res.status}`);
       const data = await res.json();
       const text = data?.content?.[0]?.text;
-      return text?.trim() || offlineFallbackAnswer;
+      if (text && text.trim()) {
+        return {
+          text: text.trim(),
+          engine: 'ai',
+          modelName: `Anthropic Claude (${model})`
+        };
+      }
+      return { text: offlineFallbackAnswer, engine: 'rule_based' };
     }
 
     // ==========================================
@@ -348,13 +385,20 @@ Jawab dengan tegas dan jelas dalam Bahasa Indonesia.
       if (!res.ok) throw new Error(`DeepSeek API error: ${res.status}`);
       const data = await res.json();
       const text = data?.choices?.[0]?.message?.content;
-      return text?.trim() || offlineFallbackAnswer;
+      if (text && text.trim()) {
+        return {
+          text: text.trim(),
+          engine: 'ai',
+          modelName: `DeepSeek (${model})`
+        };
+      }
+      return { text: offlineFallbackAnswer, engine: 'rule_based' };
     }
 
-    return offlineFallbackAnswer;
+    return { text: offlineFallbackAnswer, engine: 'rule_based' };
   } catch (err) {
     console.error(`AI Provider (${config.provider}) execution error:`, err);
-    return offlineFallbackAnswer;
+    return { text: offlineFallbackAnswer, engine: 'rule_based' };
   }
 }
 

@@ -18,7 +18,8 @@ import {
   FileText, 
   Lock,
   Cpu,
-  User
+  User,
+  Sparkles
 } from 'lucide-react';
 
 interface HologramHUDProps {
@@ -45,6 +46,9 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
   const [showTopicSelector, setShowTopicSelector] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  const activeConfig = getActiveAIConfig();
+  const isCloudConfigured = Boolean(activeConfig.apiKey && activeConfig.apiKey.trim().length > 0);
 
   // Automatically switch to chat tab, expand HUD, and scroll to bottom when a new response arrives
   useEffect(() => {
@@ -256,10 +260,17 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
                 <Lock className="w-3 h-3 text-cyan-400 shrink-0" />
                 <span>{lang === 'en' ? 'RAM-Only' : 'RAM-Only (Privasi)'}</span>
               </div>
-              <div className="py-1 px-2 rounded-lg bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 font-semibold flex items-center gap-1.5">
-                <Cpu className="w-3 h-3 text-cyan-400 shrink-0" />
-                <span className="truncate">{PROVIDER_PRESETS[getActiveAIConfig().provider]?.name.split(' ')[0] || 'AI'}</span>
-              </div>
+              {isCloudConfigured ? (
+                <div className="py-1 px-2 rounded-lg bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 font-semibold flex items-center gap-1.5 shadow-sm">
+                  <Sparkles className="w-3 h-3 text-emerald-400 shrink-0" />
+                  <span className="truncate">AI Cloud: {PROVIDER_PRESETS[activeConfig.provider]?.name.split(' ')[0]} ({activeConfig.model})</span>
+                </div>
+              ) : (
+                <div className="py-1 px-2 rounded-lg bg-amber-950/60 border border-amber-500/30 text-amber-300 font-semibold flex items-center gap-1.5 shadow-sm">
+                  <Cpu className="w-3 h-3 text-amber-400 shrink-0" />
+                  <span className="truncate">{lang === 'en' ? 'Rule-Based Engine (Offline)' : 'Mode: Rule-Based (Offline)'}</span>
+                </div>
+              )}
             </div>
 
             {messages.length === 0 ? (
@@ -284,10 +295,24 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
                     ) : (
                       <>
                         <span
-                          className="w-1.5 h-1.5 rounded-full"
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
                           style={{ backgroundColor: currentTopic.character_primary_color }}
                         />
                         <span className="font-bold text-cyan-300">{currentTopic.character_name}</span>
+
+                        {/* Engine Indicator Badge: AI vs Rule-Based */}
+                        {m.engine === 'ai' ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-semibold tracking-wide shadow-sm">
+                            <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+                            <span>AI ({m.aiModel || 'Cloud LLM'})</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-semibold tracking-wide shadow-sm">
+                            <Cpu className="w-2.5 h-2.5 text-amber-400" />
+                            <span>Rule-Based (Offline)</span>
+                          </span>
+                        )}
+
                         <span className="text-slate-500 hidden xs:inline">({lang === 'en' ? 'Voice & Text' : 'Suara & Teks'})</span>
                       </>
                     )}

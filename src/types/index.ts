@@ -49,6 +49,8 @@ export interface EphemeralChatMessage {
   text: string;
   timestamp: number;
   isAudioPlaying?: boolean;
+  engine?: 'ai' | 'rule_based';
+  aiModel?: string;
 }
 
 export interface AuthSession {
