@@ -22,7 +22,9 @@ import {
   Sparkles,
   Check,
   X,
-  Bot
+  Bot,
+  Lock,
+  Unlock
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -247,26 +249,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
 
                 <form onSubmit={handleSaveAIConfig} className="space-y-4">
+                  {/* Step 1: Input API Key */}
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                      Pilihan Model ({PROVIDER_PRESETS[aiConfig.provider].name})
-                    </label>
-                    <select
-                      value={aiConfig.model}
-                      onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-sm focus:border-cyan-400 focus:outline-none font-mono"
-                    >
-                      {PROVIDER_PRESETS[aiConfig.provider].models.map((m) => (
-                        <option key={m} value={m}>
-                          {m}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                      API Key
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Key className="w-3.5 h-3.5 text-cyan-400" />
+                        Langkah 1: Masukkan API Key {PROVIDER_PRESETS[aiConfig.provider].name}
+                      </span>
+                      {aiConfig.apiKey.trim() ? (
+                        <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                          <Check className="w-3 h-3" /> Kunci Terpasang
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-amber-400 font-medium">Wajib Diisi</span>
+                      )}
                     </label>
                     <div className="relative">
                       <input
@@ -278,6 +274,53 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       />
                       <Key className="w-4 h-4 text-slate-500 absolute right-3 top-3 pointer-events-none" />
                     </div>
+                  </div>
+
+                  {/* Step 2: Model Selection (Unlocked only when API Key is filled) */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                        {aiConfig.apiKey.trim() ? (
+                          <Unlock className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <Lock className="w-3.5 h-3.5 text-amber-400" />
+                        )}
+                        <span>Langkah 2: Pilihan Model ({PROVIDER_PRESETS[aiConfig.provider].name})</span>
+                      </label>
+                      {aiConfig.apiKey.trim() ? (
+                        <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                          <Check className="w-3 h-3" /> Terbuka
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-amber-400 font-medium flex items-center gap-1">
+                          <Lock className="w-3 h-3" /> Terkunci
+                        </span>
+                      )}
+                    </div>
+
+                    <select
+                      disabled={!aiConfig.apiKey.trim()}
+                      value={aiConfig.model}
+                      onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
+                      className={`w-full px-3.5 py-2.5 rounded-xl text-sm font-mono transition-all ${
+                        aiConfig.apiKey.trim()
+                          ? 'bg-slate-950 border border-cyan-500/50 text-slate-100 focus:border-cyan-400 focus:outline-none cursor-pointer'
+                          : 'bg-slate-950/40 border border-slate-800 text-slate-600 cursor-not-allowed opacity-60'
+                      }`}
+                    >
+                      {PROVIDER_PRESETS[aiConfig.provider].models.map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+
+                    {!aiConfig.apiKey.trim() && (
+                      <p className="text-[11px] text-amber-400/90 mt-1.5 flex items-center gap-1">
+                        <Lock className="w-3 h-3 shrink-0" />
+                        <span>Masukkan API Key pada langkah 1 di atas untuk membuka pilihan model.</span>
+                      </p>
+                    )}
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-400 space-y-1">
@@ -375,28 +418,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
 
-              {/* Model Selection */}
+              {/* Step 1: API Key Field */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                  Model AI ({PROVIDER_PRESETS[aiConfig.provider].name})
-                </label>
-                <select
-                  value={aiConfig.model}
-                  onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-xs focus:border-cyan-400 focus:outline-none font-mono"
-                >
-                  {PROVIDER_PRESETS[aiConfig.provider].models.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* API Key Field */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                  API Key {PROVIDER_PRESETS[aiConfig.provider].name}
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Key className="w-3.5 h-3.5 text-cyan-400" />
+                    Langkah 1: Masukkan API Key {PROVIDER_PRESETS[aiConfig.provider].name}
+                  </span>
+                  {aiConfig.apiKey.trim() ? (
+                    <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Terisi
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-amber-400 font-medium">Wajib Diisi</span>
+                  )}
                 </label>
                 <div className="relative">
                   <input
@@ -408,6 +443,53 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   />
                   <Key className="w-4 h-4 text-slate-500 absolute right-3 top-3 pointer-events-none" />
                 </div>
+              </div>
+
+              {/* Step 2: Model Selection (Unlocked only when API Key is filled) */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                    {aiConfig.apiKey.trim() ? (
+                      <Unlock className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <Lock className="w-3.5 h-3.5 text-amber-400" />
+                    )}
+                    <span>Langkah 2: Model AI ({PROVIDER_PRESETS[aiConfig.provider].name})</span>
+                  </label>
+                  {aiConfig.apiKey.trim() ? (
+                    <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Terbuka
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-amber-400 font-medium flex items-center gap-1">
+                      <Lock className="w-3 h-3" /> Terkunci
+                    </span>
+                  )}
+                </div>
+
+                <select
+                  disabled={!aiConfig.apiKey.trim()}
+                  value={aiConfig.model}
+                  onChange={(e) => setAiConfig({ ...aiConfig, model: e.target.value })}
+                  className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-mono transition-all ${
+                    aiConfig.apiKey.trim()
+                      ? 'bg-slate-950 border border-cyan-500/50 text-slate-100 focus:border-cyan-400 focus:outline-none cursor-pointer'
+                      : 'bg-slate-950/40 border border-slate-800 text-slate-600 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  {PROVIDER_PRESETS[aiConfig.provider].models.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+
+                {!aiConfig.apiKey.trim() && (
+                  <p className="text-[10px] text-amber-400/90 mt-1 flex items-center gap-1">
+                    <Lock className="w-3 h-3 shrink-0" />
+                    <span>Masukkan API Key pada langkah 1 untuk membuka pilihan model.</span>
+                  </p>
+                )}
               </div>
 
               {/* Helper Links */}

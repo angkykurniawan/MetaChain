@@ -49,6 +49,7 @@ export function getActiveAIConfig(): AIProviderConfig {
 
   // Check from environment variables fallback
   const envProvider = (import.meta.env.VITE_AI_PROVIDER as AIProviderType) || 'google';
+  const envModel = import.meta.env.VITE_AI_MODEL as string | undefined;
   let envKey = '';
 
   if (envProvider === 'openai') {
@@ -64,7 +65,7 @@ export function getActiveAIConfig(): AIProviderConfig {
   return {
     provider: envProvider,
     apiKey: envKey,
-    model: PROVIDER_PRESETS[envProvider]?.defaultModel || 'gemini-2.5-flash'
+    model: envModel || PROVIDER_PRESETS[envProvider]?.defaultModel || 'gemini-2.5-flash'
   };
 }
 
