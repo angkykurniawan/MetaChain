@@ -38,13 +38,13 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
       case 'network':
         if (isBrave) {
           return {
-            title: 'Brave Browser Memblokir Layanan Suara Google',
-            solution: 'Buka pengaturan Brave di brave://settings/privacy lalu aktifkan "Gunakan layanan Google untuk pengenalan ucapan" (Use Google services for speech recognition), lalu muat ulang halaman.'
+            title: 'Layanan Suara Dinonaktifkan di Browser Brave',
+            solution: 'Buka pengaturan Brave di brave://settings/privacy lalu aktifkan "Gunakan layanan Google untuk pengenalan ucapan", lalu muat ulang halaman.'
           };
         }
         return {
-          title: 'Koneksi ke Server Pengenal Suara Google Terkendala',
-          solution: 'Web Speech API pada Chrome memerlukan koneksi ke server Google Cloud. Periksa koneksi internet/firewall, atau gunakan kolom ketik teks di samping untuk bertanya secara lancar.'
+          title: 'Koneksi Pengenalan Suara Terputus',
+          solution: 'Koneksi internet untuk fitur suara terhalang atau sedang tidak stabil. Pastikan internet Anda aktif dan matikan VPN jika ada, atau silakan ketik langsung di kolom teks.'
         };
       case 'not-allowed':
       case 'service-not-allowed':
