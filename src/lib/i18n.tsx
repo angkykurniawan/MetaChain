@@ -129,6 +129,11 @@ export interface Translations {
   quickPrompt4: string;
   curriculumFromAdmin: string;
   curriculumFromAI: string;
+  listenGuide: string;
+  readingGuide: string;
+  stopReading: string;
+  listenMessage: string;
+  stopVoice: string;
 
   // Landing Page
   navHome: string;
@@ -262,8 +267,8 @@ const translations: Record<Language, Translations> = {
     enterVRBtn: 'Enter WebXR VR',
     inVRStatus: 'Sedang di VR',
     orbitHint: 'Gunakan mouse drag untuk rotasi kamera 360°',
-    curriculumTab: 'Panduan Materi',
-    chatTab: 'Tanya Jawab Suara',
+    curriculumTab: 'Panduan Kurikulum',
+    chatTab: 'Tanya Jawab (Voice Q&A)',
     speakingBtn: 'Bicara...',
     mentorSpeakingStatus: 'Mentor sedang berbicara...',
     listeningStatus: 'Mendengarkan suara Anda...',
@@ -277,6 +282,11 @@ const translations: Record<Language, Translations> = {
     quickPrompt4: 'Roadmap belajar untuk pemula?',
     curriculumFromAdmin: 'Kurikulum Resmi dari Admin',
     curriculumFromAI: 'Mode Otomatis: Kurikulum dari AI Mentor',
+    listenGuide: 'Dengarkan Materi',
+    readingGuide: 'Membacakan Materi...',
+    stopReading: 'Hentikan Pembacaan',
+    listenMessage: 'Dengarkan',
+    stopVoice: 'Hentikan Suara',
 
     // Landing Page
     navHome: 'Beranda',
@@ -423,6 +433,11 @@ const translations: Record<Language, Translations> = {
     quickPrompt4: 'Learning roadmap for beginners?',
     curriculumFromAdmin: 'Official Curriculum from Admin',
     curriculumFromAI: 'Auto Mode: AI Generated Curriculum',
+    listenGuide: 'Listen to Guide',
+    readingGuide: 'Reading Guide...',
+    stopReading: 'Stop Reading',
+    listenMessage: 'Listen',
+    stopVoice: 'Stop Voice',
 
     // Landing Page
     navHome: 'Home',
@@ -457,23 +472,18 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [lang, setLangState] = useState<Language>(() => {
+  useEffect(() => {
     try {
-      const saved = localStorage.getItem('metachain_lang');
-      if (saved === 'en' || saved === 'id') return saved;
+      localStorage.removeItem('metachain_lang');
     } catch {}
-    return 'id'; // Default to Indonesian
-  });
+  }, []);
 
-  const setLang = (newLang: Language) => {
-    // Strict requirement: Only 'id' or 'en' allowed!
-    if (newLang !== 'id' && newLang !== 'en') return;
-    setLangState(newLang);
-    localStorage.setItem('metachain_lang', newLang);
+  const setLang = (_newLang: Language) => {
+    // English removed: platform is strictly in Bahasa Indonesia
   };
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t: translations[lang] }}>
+    <LanguageContext.Provider value={{ lang: 'id', setLang, t: translations.id }}>
       {children}
     </LanguageContext.Provider>
   );

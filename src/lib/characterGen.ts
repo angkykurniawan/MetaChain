@@ -96,27 +96,7 @@ export function generateCharacterForTopic(topicTitle: string, topicDescription: 
 /**
  * Generate AI Fallback learning outline when admin hasn't provided a curriculum
  */
-export function generateAIFallbackCurriculum(topicTitle: string, lang: 'id' | 'en' = 'id'): string {
-  if (lang === 'en') {
-    return `## Smart Curriculum (AI Fallback) — ${topicTitle}
-> 🤖 *Auto Mode: This curriculum outline is generated dynamically by the AI Mentor because no custom guide was uploaded by the Admin.*
-
-### 1. Core Principles & Why It Matters
-* Historical context and the necessity of ${topicTitle} in modern distributed computing.
-* Fundamental value proposition and architectural comparisons.
-
-### 2. Primary Architectural Components
-* Structural pillars, protocol standards, and data lifecycle mechanisms.
-* Execution flows and industry design standards.
-
-### 3. Real-World Industry Application
-* Production-grade case studies from modern tech companies.
-* Trade-offs: Balancing performance, latency, security, and cost.
-
-### 4. Hands-On Exploration Roadmap
-* Essential developer toolkits, SDKs, and foundational step-by-step practices.`;
-  }
-
+export function generateAIFallbackCurriculum(topicTitle: string, _lang: 'id' | 'en' = 'id'): string {
   return `## Kurikulum Cerdas (AI Fallback) — ${topicTitle}
 > 🤖 *Mode Otomatis: Materi ini disusun oleh AI Mentor karena belum ada panduan kurikulum yang diunggah oleh Admin.*
 
@@ -195,53 +175,27 @@ export function isOutOfContext(text: string, topic: Topic): boolean {
 /**
  * AI Conversational Engine for answering student questions inside the VR Hub
  */
-export function generateAIAnswer(topic: Topic, userQuestion: string, lang: 'id' | 'en' = 'id'): string {
+export function generateAIAnswer(topic: Topic, userQuestion: string, _lang: 'id' | 'en' = 'id'): string {
   const q = userQuestion.toLowerCase().trim();
   const name = topic.character_name;
   const title = topic.title;
 
   // 1. Basic Greeting Handler (Hanya menyapa, TIDAK memperkenalkan nama kecuali ditanya)
   if (isBasicGreeting(q)) {
-    if (lang === 'en') {
-      return `Hello! How can I assist you with "${title}" today?`;
-    }
     return `Halo! Ada konsep atau pertanyaan seputar "${title}" yang ingin Anda tanyakan hari ini?`;
   }
 
-  // 2. Identity Inquiry Handler (HANYA KETIKA DITANYA identitas seperti "siapa kamu", "siapa anda", "who are you")
+  // 2. Identity Inquiry Handler (HANYA KETIKA DITANYA identitas seperti "siapa kamu", "siapa anda")
   if (isIdentityInquiry(q)) {
-    if (lang === 'en') {
-      return `I am ${name}, the 3D AI Mentor for "${title}" at MetaChain WebXR Academy. Persona: ${topic.character_persona}.`;
-    }
     return `Saya adalah ${name}, 3D AI Mentor untuk materi "${title}" di MetaChain WebXR Academy. Persona: ${topic.character_persona}.`;
   }
 
   // 3. Strict Out-of-Context Check (Zero-Tolerance Scope Boundary)
   if (isOutOfContext(q, topic)) {
-    if (lang === 'en') {
-      return `I apologize, but that question is outside the scope of "${title}". As the dedicated mentor for this module, I can only assist with questions directly related to ${title}.`;
-    }
     return `Maaf, pertanyaan tersebut di luar tugas dan konteks materi "${title}". Sebagai mentor khusus materi ini, saya hanya dapat menjawab pertanyaan yang berkaitan langsung dengan ${title}.`;
   }
 
-  // 4. Topic Domain Educational Responses (Langsung ke inti jawaban materi, tanpa introduksi atau basa-basi pembuka)
-  if (lang === 'en') {
-    if (q.includes('what is') || q.includes('explain') || q.includes('definition')) {
-      return `${title} centers on ${topic.description.toLowerCase()}. The core foundation lies in its structural architecture and how components reliably exchange instructions.`;
-    }
-    if (q.includes('benefit') || q.includes('advantage') || q.includes('why')) {
-      return `The primary advantage of ${title} lies in high scalability, structural resilience, and reducing operational friction in large-scale modern environments.`;
-    }
-    if (q.includes('roadmap') || q.includes('start') || q.includes('learn') || q.includes('beginner')) {
-      return `Start by mastering foundational protocols: understand data flows and state management first, then build a minimal proof-of-concept project locally.`;
-    }
-    if (q.includes('challenge') || q.includes('drawback') || q.includes('risk')) {
-      return `The biggest hurdles in ${title} typically involve the learning curve, security posture validation, and infrastructure overhead if not architected cleanly from the outset.`;
-    }
-    return `The key foundation of ${title} relates directly to ${topic.character_persona.split(',')[0]} and the practical implementation of ${topic.description.toLowerCase()}.`;
-  }
-
-  // Indonesian responses (Langsung ke inti jawaban materi, tanpa introduksi atau basa-basi pembuka)
+  // 4. Indonesian responses (Langsung ke inti jawaban materi, tanpa introduksi atau basa-basi pembuka)
   if (q.includes('apa itu') || q.includes('jelaskan') || q.includes('pengertian')) {
     return `${title} berfokus pada ${topic.description.toLowerCase()}. Konsep intinya terletak pada arsitektur sistem dan bagaimana komponen di dalamnya saling bertukar instruksi secara andal.`;
   }

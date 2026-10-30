@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { dbService, isLiveSupabase } from '../../lib/supabase';
 import { Profile } from '../../types';
 import { useLanguage } from '../../lib/i18n';
-import { LanguageToggle } from '../common/LanguageToggle';
 import { ThemeToggle } from '../common/ThemeToggle';
-import { Shield, Sparkles, LogIn, UserCheck, AlertCircle, Cpu, Database, X, ArrowLeft } from 'lucide-react';
+import { Shield, LogIn, UserCheck, AlertCircle, Cpu, Database, ArrowLeft } from 'lucide-react';
 
 interface LoginModalProps {
   onLoginSuccess: (user: Profile) => void;
@@ -55,10 +54,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ onLoginSuccess, onClose 
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Top Right Controls: Language Switcher & Theme Switcher */}
+      {/* Top Right Controls: Theme Switcher */}
       <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
         <ThemeToggle />
-        <LanguageToggle />
       </div>
 
       <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-cyan-500/30 rounded-2xl p-6 sm:p-8 shadow-2xl shadow-cyan-950/50 relative z-10 mx-2">

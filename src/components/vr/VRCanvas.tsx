@@ -6,9 +6,8 @@ import { createSciFiEnvironment, EnvironmentInstance } from './SciFiEnvironment'
 import { HologramHUD } from './HologramHUD';
 import { speechEngine } from '../../lib/speechEngine';
 import { generateAIAnswer } from '../../lib/characterGen';
-import { queryActiveLLMMentor, getActiveAIConfig, PROVIDER_PRESETS } from '../../lib/aiProvider';
+import { queryActiveLLMMentor } from '../../lib/aiProvider';
 import { useLanguage } from '../../lib/i18n';
-import { LanguageToggle } from '../common/LanguageToggle';
 import { ThemeToggle } from '../common/ThemeToggle';
 import { Glasses, LogOut, Compass, Square } from 'lucide-react';
 
@@ -23,11 +22,12 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
   topics,
   onLogout
 }) => {
-  const { lang, t } = useLanguage();
+  const { t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeTopic, setActiveTopic] = useState<Topic>(topics[0]);
   const [messages, setMessages] = useState<EphemeralChatMessage[]>([]);
   const [isMentorSpeaking, setIsMentorSpeaking] = useState(false);
+  const [activeSpeakingId, setActiveSpeakingId] = useState<string | null>(null);
   const [isVRAvailable, setIsVRAvailable] = useState(false);
   const [isInVR, setIsInVR] = useState(false);
 
@@ -190,6 +190,37 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
     };
   }, []);
 
+  const handleStopVoice = () => {
+    speechEngine.stopSpeaking();
+    setIsMentorSpeaking(false);
+    setActiveSpeakingId(null);
+  };
+
+  const handleSpeakText = (text: string, id: string = 'generic') => {
+    speechEngine.stopSpeaking();
+    setIsMentorSpeaking(true);
+    setActiveSpeakingId(id);
+
+    speechEngine.speak({
+      text,
+      lang: 'id',
+      pitch: activeTopic.character_voice_pitch,
+      rate: activeTopic.character_voice_rate,
+      onStart: () => {
+        setIsMentorSpeaking(true);
+        setActiveSpeakingId(id);
+      },
+      onEnd: () => {
+        setIsMentorSpeaking(false);
+        setActiveSpeakingId(null);
+      },
+      onError: () => {
+        setIsMentorSpeaking(false);
+        setActiveSpeakingId(null);
+      }
+    });
+  };
+
   // Update Avatar when activeTopic changes
   useEffect(() => {
     if (!sceneRef.current) return;
@@ -218,20 +249,12 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
 
     // Greet the student with the dedicated voice line
     if (activeTopic.character_greeting) {
-      setIsMentorSpeaking(true);
-      speechEngine.speak({
-        text: activeTopic.character_greeting,
-        lang: lang,
-        pitch: activeTopic.character_voice_pitch,
-        rate: activeTopic.character_voice_rate,
-        onEnd: () => setIsMentorSpeaking(false),
-        onError: () => setIsMentorSpeaking(false)
-      });
+      handleSpeakText(activeTopic.character_greeting, 'greeting');
     }
 
     // Clear previous chat on topic switch (Zero-Retention Policy)
     setMessages([]);
-  }, [activeTopic, lang]);
+  }, [activeTopic]);
 
   // Handle User sending question via Voice or Text
   const handleSendMessage = async (text: string) => {
@@ -244,9 +267,9 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
 
     setMessages((prev) => [...prev, userMsg]);
 
-    // Generate fallback heuristic answer, then query chosen AI Provider (Google, OpenAI, Claude, DeepSeek)
-    const offlineAnswer = generateAIAnswer(activeTopic, text, lang);
-    const result = await queryActiveLLMMentor(activeTopic, text, offlineAnswer, lang);
+    // Generate fallback heuristic answer, then query chosen AI Provider
+    const offlineAnswer = generateAIAnswer(activeTopic, text, 'id');
+    const result = await queryActiveLLMMentor(activeTopic, text, offlineAnswer, 'id');
 
     const mentorMsg: EphemeralChatMessage = {
       id: `msg-${Date.now() + 1}`,
@@ -258,21 +281,8 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
     };
     setMessages((prev) => [...prev, mentorMsg]);
 
-    // Speak answer through spatial speech engine
-    setIsMentorSpeaking(true);
-    speechEngine.speak({
-      text: result.text,
-      lang: lang,
-      pitch: activeTopic.character_voice_pitch,
-      rate: activeTopic.character_voice_rate,
-      onEnd: () => setIsMentorSpeaking(false),
-      onError: () => setIsMentorSpeaking(false)
-    });
-  };
-
-  const handleStopVoice = () => {
-    speechEngine.stopSpeaking();
-    setIsMentorSpeaking(false);
+    // Speak answer automatically through spatial speech engine
+    handleSpeakText(result.text, mentorMsg.id);
   };
 
   const handleEnterVR = async () => {
@@ -307,22 +317,21 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
           <span>{t.orbitHint}</span>
         </div>
 
-        {/* Action Buttons: Theme Toggle, Language Switcher, Enter VR & Logout */}
+        {/* Action Buttons: Quick Stop Voice, Theme Toggle, Enter VR & Logout */}
         <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
           {/* Quick Stop Voice Button if Speaking */}
           {isMentorSpeaking && (
             <button
               onClick={handleStopVoice}
               className="py-1 px-2.5 sm:py-1.5 sm:px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/60 text-rose-300 text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-rose-950/40 transition-all cursor-pointer animate-pulse"
-              title={lang === 'en' ? 'Stop Speaking Voice' : 'Hentikan Suara yang Menjawab'}
+              title="Hentikan Suara yang Menjawab"
             >
               <Square className="w-3.5 h-3.5 fill-current text-rose-400" />
-              <span className="hidden xs:inline">{lang === 'en' ? 'Stop Voice' : 'Hentikan Suara'}</span>
+              <span className="hidden xs:inline">Hentikan Suara</span>
             </button>
           )}
 
           <ThemeToggle />
-          <LanguageToggle />
 
           {isVRAvailable && (
             <button
@@ -358,9 +367,10 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
           isMentorSpeaking={isMentorSpeaking}
           onSendMessage={handleSendMessage}
           onStopVoice={handleStopVoice}
+          onSpeakText={handleSpeakText}
+          activeSpeakingId={activeSpeakingId}
         />
       </div>
     </div>
   );
 };
-

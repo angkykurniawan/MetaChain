@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../../lib/i18n';
-import { LanguageToggle } from '../common/LanguageToggle';
 import { ThemeToggle } from '../common/ThemeToggle';
 import { 
   Cpu, 
@@ -92,10 +91,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onOpenLogin }) => {
             </a>
           </nav>
 
-          {/* Right Controls: Theme Toggle, Language Toggle & Sign In */}
+          {/* Right Controls: Theme Toggle & Sign In */}
           <div className="flex items-center gap-2 sm:gap-3">
             <ThemeToggle />
-            <LanguageToggle />
 
             <button
               onClick={onOpenLogin}

@@ -230,7 +230,7 @@ export async function queryActiveLLMMentor(
   topic: Topic,
   userQuestion: string,
   offlineFallbackAnswer: string,
-  lang: 'id' | 'en' = 'id'
+  _lang: 'id' | 'en' = 'id'
 ): Promise<MentorResult> {
   const config = getActiveAIConfig();
   const apiKey = config.apiKey.trim();
@@ -252,30 +252,7 @@ export async function queryActiveLLMMentor(
     };
   }
 
-  const systemInstruction = lang === 'en'
-    ? `
-You are a concise, high-caliber educator teaching "${topic.title}" at MetaChain WebXR Academy.
-Context: "${topic.title}" - ${topic.description}.
-Persona: ${topic.character_persona}.
-
-STRICT MANDATORY RULES:
-1. NO GREETINGS, NO INTRODUCTIONS, NO PREAMBLE:
-   - NEVER start with self-introductions (NEVER say "Hello, I am [name]...", "My name is...", "As your mentor...").
-   - NEVER start with conversational filler (NEVER say "Hello!", "Hi!", "Sure!", "Great question!", "Let's explore...", "Certainly!").
-   - JUMP IMMEDIATELY into the direct answer and technical explanation.
-   - Mention your identity (${topic.character_name}) ONLY if the student explicitly asks who you are.
-
-2. ZERO-TOLERANCE SCOPE BOUNDARY:
-   - You teach ONLY "${topic.title}".
-   - If the user asks about anything outside "${topic.title}" (cooking, recipes, politics, sports, entertainment, medical, romance, general trivia), reply ONLY:
-     "I apologize, but that question is outside the scope of \"${topic.title}\". As the dedicated mentor for this module, I can only assist with questions directly related to ${topic.title}."
-
-3. FORMAT & LENGTH:
-   - Highly educational, precise, articulate, and concise (maximum 2-3 sentences).
-   - Optimized for clear, natural text-to-speech audio.
-   - Answer in English.
-`.trim()
-    : `
+  const systemInstruction = `
 Kamu adalah edukator handal yang mengajar materi "${topic.title}" di akademi virtual MetaChain WebXR.
 Konteks Materi: "${topic.title}" - ${topic.description}.
 Persona: ${topic.character_persona}.
@@ -295,7 +272,7 @@ ATURAN MUTLAK (WAJIB DIPATUHI):
 3. FORMAT & PANJANG JAWABAN:
    - Padat, jelas, akurat, edukatif (maksimal 2-3 kalimat to-the-point).
    - Nyaman dan natural didengarkan via suara (Text-to-Speech).
-   - Jawab dalam Bahasa Indonesia.
+   - Jawab selalu dalam Bahasa Indonesia.
 `.trim();
 
   try {

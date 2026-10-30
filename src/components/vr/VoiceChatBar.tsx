@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { speechEngine } from '../../lib/speechEngine';
 import { useLanguage } from '../../lib/i18n';
-import { Mic, Send, Sparkles, Square, VolumeX } from 'lucide-react';
+import { Mic, Send, Sparkles, Square } from 'lucide-react';
 
 interface VoiceChatBarProps {
   topicTitle: string;
@@ -16,7 +16,7 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
   onSendMessage,
   onStopVoice
 }) => {
-  const { lang, t } = useLanguage();
+  const { t } = useLanguage();
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [speechError, setSpeechError] = useState<string | null>(null);
@@ -27,7 +27,6 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
       setIsListening(false);
     } else {
       setSpeechError(null);
-      // Strictly pass the active language ('id' or 'en') for voice recognition
       speechEngine.startListening(
         (transcript) => {
           if (transcript.trim()) {
@@ -36,7 +35,7 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
         },
         (listening) => setIsListening(listening),
         (error) => setSpeechError(error),
-        lang
+        'id'
       );
     }
   };
@@ -52,12 +51,7 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
     onSendMessage(prompt);
   };
 
-  const quickPrompts = lang === 'en' ? [
-    `What is ${topicTitle}?`,
-    `How does it work?`,
-    `What are the key benefits?`,
-    `Beginner roadmap?`
-  ] : [
+  const quickPrompts = [
     `Apa itu ${topicTitle}?`,
     `Bagaimana cara kerjanya?`,
     `Apa manfaat terbesarnya?`,
@@ -94,8 +88,8 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
           }`}
           title={
             isListening
-              ? (lang === 'en' ? 'Stop listening' : 'Berhenti mendengarkan')
-              : (lang === 'en' ? 'Speak with Microphone (Voice Input)' : 'Bicara lewat Mikrofon (Input Suara)')
+              ? 'Berhenti mendengarkan'
+              : 'Bicara lewat Mikrofon (Input Suara)'
           }
         >
           {isListening ? <Mic className="w-5 h-5 text-red-400" /> : <Mic className="w-5 h-5" />}
@@ -110,10 +104,10 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
             type="button"
             onClick={onStopVoice}
             className="px-3 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/60 text-rose-300 flex items-center gap-1.5 text-xs font-bold transition-all shadow-lg shadow-rose-950/40 cursor-pointer animate-pulse shrink-0"
-            title={lang === 'en' ? 'Stop Speaking Voice' : 'Hentikan Suara yang Menjawab'}
+            title="Hentikan Suara yang Menjawab"
           >
             <Square className="w-3.5 h-3.5 fill-current text-rose-400" />
-            <span className="hidden xs:inline">{lang === 'en' ? 'Stop Voice' : 'Hentikan Suara'}</span>
+            <span className="hidden xs:inline">Hentikan Suara</span>
           </button>
         )}
 
@@ -128,7 +122,7 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
                 ? t.listeningStatus
                 : isMentorSpeaking
                 ? t.mentorSpeakingStatus
-                : (lang === 'en' ? `Ask anything about ${topicTitle}...` : `Tanyakan sesuatu seputar ${topicTitle}...`)
+                : `Tanyakan sesuatu seputar ${topicTitle}...`
             }
             className="w-full pl-4 pr-10 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 focus:border-cyan-400 focus:outline-none text-slate-100 text-xs placeholder:text-slate-500"
           />
@@ -139,7 +133,7 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
           type="submit"
           disabled={!inputText.trim()}
           className="p-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 text-slate-950 font-bold transition-all shadow-md shadow-cyan-500/20 cursor-pointer shrink-0"
-          title={lang === 'en' ? 'Send text question' : 'Kirim pertanyaan teks'}
+          title="Kirim pertanyaan teks"
         >
           <Send className="w-4 h-4" />
         </button>
@@ -148,7 +142,7 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
       {/* Status banner */}
       {speechError && (
         <div className="text-[10px] text-red-400 px-2">
-          Mic status: {speechError} ({lang === 'en' ? 'Please use text input' : 'Gunakan input teks di samping'}).
+          Mic status: {speechError} (Gunakan input teks di samping).
         </div>
       )}
     </div>

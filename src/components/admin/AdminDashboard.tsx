@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Profile } from '../../types';
 import { isLiveSupabase } from '../../lib/supabase';
 import { useLanguage } from '../../lib/i18n';
-import { LanguageToggle } from '../common/LanguageToggle';
 import { ThemeToggle } from '../common/ThemeToggle';
 import { 
   getActiveAIConfig, 
@@ -185,9 +184,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             {/* Theme Toggle (Light / Dark) */}
             <ThemeToggle />
-
-            {/* Language Switcher (Strictly ID / EN) */}
-            <LanguageToggle />
 
             {/* Preview VR button for Admin */}
             <button

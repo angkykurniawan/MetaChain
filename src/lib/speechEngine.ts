@@ -1,14 +1,15 @@
 /**
- * High-Clarity Web Speech API Controller
- * Supports strictly Indonesian ('id') and English ('en').
- * Includes automatic markdown stripping so voice audio is crisp, natural, and clear.
+ * High-Clarity Web Speech API Controller (Bahasa Indonesia)
+ * Mendukung sintesis suara (TTS) dan pengenalan suara (STT) bahasa Indonesia ('id-ID').
+ * Dilengkapi pembersihan markdown dan pemotongan kalimat otomatis (sentence chunking)
+ * agar pembacaan teks panjang (kurikulum / jawaban AI) tidak terpotong oleh limit browser.
  */
 
-export type VoiceLang = 'id' | 'en';
+export type VoiceLang = 'id';
 
 interface SpeakOptions {
   text: string;
-  lang?: VoiceLang;
+  lang?: string;
   pitch?: number;
   rate?: number;
   onStart?: () => void;
@@ -17,28 +18,64 @@ interface SpeakOptions {
 }
 
 /**
- * Sanitizes markdown, asterisks, URLs, and code blocks before speaking
- * so the synthetic voice sounds completely natural, clear, and fluent.
+ * Membersihkan format markdown, karakter khusus, URL, dan blok kode sebelum dibacakan
+ * agar suara sintetis terdengar sangat jelas, alami, dan lancar.
  */
 export function cleanTextForSpeech(rawText: string): string {
   if (!rawText) return '';
   return rawText
-    // Remove markdown headers
+    // Hapus markdown header (#, ##, ###)
     .replace(/^#+\s+/gm, '')
-    // Remove bold/italic asterisks or underscores
+    // Ganti kata bold/italic dengan kata aslinya
     .replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, '$1')
-    // Remove code blocks and inline code
+    // Ganti blok kode dengan sebutan ramah suara
     .replace(/```[\s\S]*?```/g, 'kode program')
     .replace(/`([^`]+)`/g, '$1')
-    // Convert markdown links [title](url) to title
+    // Ubah markdown link [judul](url) menjadi judul
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    // Remove bullet point symbols
-    .replace(/^[\s*-•>]+\s*/gm, '')
-    // Remove emojis or special tech symbols that may cause stutter
+    // Hapus simbol bullet point, strip, dan nomor urut di awal baris
+    .replace(/^[\s*•>–—-]+\s*/gm, '')
+    // Konversi simbol & menjadi kata 'dan'
+    .replace(/&/g, ' dan ')
+    // Hapus emoji dan simbol teknis yang menyebabkan stutter
     .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
-    // Normalize extra whitespace
+    // Hapus karakter markdown sisa
+    .replace(/[#*~`]/g, '')
+    // Normalisasi spasi dan baris baru
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Membagi teks panjang menjadi beberapa potongan kalimat pendek (maks ~160 karakter)
+ * untuk menghindari bug Web Speech API pada Chrome/Edge di mana pembacaan terputus setelah 15 detik.
+ */
+export function splitTextIntoSpeechChunks(text: string, maxChunkLength: number = 160): string[] {
+  const clean = cleanTextForSpeech(text);
+  if (!clean) return [];
+
+  // Pisahkan berdasarkan tanda baca akhir kalimat (. ! ? atau newline)
+  const sentences = clean.match(/[^.!?\n]+[.!?\n]*/g) || [clean];
+  const chunks: string[] = [];
+  let current = '';
+
+  for (const sentence of sentences) {
+    const trimmed = sentence.trim();
+    if (!trimmed) continue;
+
+    if (current && (current.length + trimmed.length + 1) > maxChunkLength) {
+      chunks.push(current.trim());
+      current = trimmed;
+    } else {
+      current = current ? `${current} ${trimmed}` : trimmed;
+    }
+  }
+
+  if (current.trim()) {
+    chunks.push(current.trim());
+  }
+
+  return chunks.length > 0 ? chunks : [clean];
 }
 
 class SpeechController {
@@ -46,6 +83,15 @@ class SpeechController {
   private recognition: any = null;
   private isListening: boolean = false;
   private voices: SpeechSynthesisVoice[] = [];
+  private currentUtterance: SpeechSynthesisUtterance | null = null;
+  private activeChunks: string[] = [];
+  private currentChunkIndex: number = 0;
+  private isSpeakingActive: boolean = false;
+  private currentPitch: number = 1.0;
+  private currentRate: number = 1.0;
+  private onStartCb?: () => void;
+  private onEndCb?: () => void;
+  private onErrorCb?: (err: any) => void;
 
   constructor() {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -78,41 +124,89 @@ class SpeechController {
     return Boolean(this.recognition);
   }
 
+  public isSpeaking(): boolean {
+    return this.isSpeakingActive || Boolean(this.synth?.speaking);
+  }
+
   /**
-   * Selects the highest quality natural voice for the target language (Indonesian or English)
+   * Memilih suara sintesis terbaik untuk Bahasa Indonesia
    */
-  private getBestVoice(lang: VoiceLang): SpeechSynthesisVoice | null {
+  private getBestVoice(): SpeechSynthesisVoice | null {
     if (this.voices.length === 0 && this.synth) {
       this.voices = this.synth.getVoices();
     }
 
-    if (lang === 'id') {
-      // Prioritize natural Indonesian voices
-      const idVoices = this.voices.filter(v => v.lang.toLowerCase().startsWith('id'));
-      // Prefer Google or Microsoft Natural voices if present
-      const preferred = idVoices.find(v => 
-        v.name.includes('Google') || 
-        v.name.includes('Natural') || 
-        v.name.includes('Gadis') || 
-        v.name.includes('Ardi')
-      );
-      return preferred || idVoices[0] || null;
-    } else {
-      // Prioritize natural US/UK English voices
-      const enVoices = this.voices.filter(v => 
-        v.lang.toLowerCase().startsWith('en-us') || 
-        v.lang.toLowerCase().startsWith('en-gb') ||
-        v.lang.toLowerCase().startsWith('en')
-      );
-      const preferred = enVoices.find(v => 
-        v.name.includes('Natural') || 
-        v.name.includes('Google US English') || 
-        v.name.includes('Samantha') || 
-        v.name.includes('Aria') ||
-        v.name.includes('Jenny')
-      );
-      return preferred || enVoices[0] || null;
+    // Cari suara Bahasa Indonesia ('id' atau 'id-ID')
+    const idVoices = this.voices.filter((v) => v.lang.toLowerCase().startsWith('id'));
+    const preferred = idVoices.find(
+      (v) =>
+        v.name.includes('Google') ||
+        v.name.includes('Natural') ||
+        v.name.includes('Gadis') ||
+        v.name.includes('Ardi') ||
+        v.name.includes('Indonesia')
+    );
+
+    return preferred || idVoices[0] || this.voices[0] || null;
+  }
+
+  private cleanupCallbacks(): void {
+    this.onStartCb = undefined;
+    this.onEndCb = undefined;
+    this.onErrorCb = undefined;
+  }
+
+  private playNextChunk(): void {
+    if (!this.synth || !this.isSpeakingActive) {
+      return;
     }
+
+    if (this.currentChunkIndex >= this.activeChunks.length) {
+      this.isSpeakingActive = false;
+      const endCallback = this.onEndCb;
+      this.cleanupCallbacks();
+      endCallback?.();
+      return;
+    }
+
+    const chunkText = this.activeChunks[this.currentChunkIndex];
+    const utterance = new SpeechSynthesisUtterance(chunkText);
+
+    utterance.pitch = this.currentPitch;
+    utterance.rate = this.currentRate;
+    utterance.lang = 'id-ID';
+
+    const voice = this.getBestVoice();
+    if (voice) {
+      utterance.voice = voice;
+    }
+
+    // Cegah garbage collection di browser
+    this.currentUtterance = utterance;
+    (window as any).__metachain_active_utterance = utterance;
+
+    utterance.onend = () => {
+      if (!this.isSpeakingActive) return;
+      this.currentChunkIndex++;
+      this.playNextChunk();
+    };
+
+    utterance.onerror = (e) => {
+      if (e.error === 'interrupted' || e.error === 'canceled') {
+        return;
+      }
+      console.warn('Speech synthesis chunk error:', e);
+      if (!this.isSpeakingActive) return;
+      this.currentChunkIndex++;
+      this.playNextChunk();
+    };
+
+    // Unpause jika macet
+    if (this.synth.paused) {
+      this.synth.resume();
+    }
+
+    this.synth.speak(utterance);
   }
 
   public speak(options: SpeakOptions): void {
@@ -121,51 +215,60 @@ class SpeechController {
       return;
     }
 
-    this.synth.cancel(); // Stop any pending speech
+    // Hentikan suara yang sedang berjalan sebelumnya
+    this.stopSpeaking();
 
-    const cleanText = cleanTextForSpeech(options.text);
-    if (!cleanText) {
+    const chunks = splitTextIntoSpeechChunks(options.text);
+    if (chunks.length === 0) {
       options.onEnd?.();
       return;
     }
 
-    const targetLang: VoiceLang = options.lang === 'en' ? 'en' : 'id';
-    const utterance = new SpeechSynthesisUtterance(cleanText);
+    this.activeChunks = chunks;
+    this.currentChunkIndex = 0;
+    this.currentPitch = options.pitch ?? 1.0;
+    this.currentRate = options.rate ?? 1.0;
+    this.onStartCb = options.onStart;
+    this.onEndCb = options.onEnd;
+    this.onErrorCb = options.onError;
+    this.isSpeakingActive = true;
 
-    // Optimized pitch and rate for crisp human clarity
-    utterance.pitch = options.pitch ?? 1.0;
-    utterance.rate = options.rate ?? 1.0;
-    utterance.lang = targetLang === 'en' ? 'en-US' : 'id-ID';
+    // Trigger onStart callback
+    this.onStartCb?.();
 
-    const bestVoice = this.getBestVoice(targetLang);
-    if (bestVoice) {
-      utterance.voice = bestVoice;
-    }
-
-    utterance.onstart = () => options.onStart?.();
-    utterance.onend = () => options.onEnd?.();
-    utterance.onerror = (e) => {
-      console.warn('Speech error or interrupted:', e);
-      options.onEnd?.();
-    };
-
-    this.synth.speak(utterance);
+    // Jalankan pemutaran potongan kalimat
+    this.playNextChunk();
   }
 
   public stopSpeaking(): void {
+    this.isSpeakingActive = false;
+    this.activeChunks = [];
+    this.currentChunkIndex = 0;
+
     if (this.synth) {
-      this.synth.cancel();
+      try {
+        this.synth.cancel();
+      } catch (err) {
+        console.warn('Synth cancel error:', err);
+      }
     }
+
+    this.currentUtterance = null;
+    (window as any).__metachain_active_utterance = null;
+
+    const endCallback = this.onEndCb;
+    this.cleanupCallbacks();
+    endCallback?.();
   }
 
   public startListening(
     onResult: (transcript: string) => void,
     onStatusChange?: (listening: boolean) => void,
     onError?: (error: string) => void,
-    lang: VoiceLang = 'id'
+    _lang: string = 'id'
   ): void {
     if (!this.recognition) {
-      onError?.(lang === 'en' ? 'Speech recognition not supported in this browser.' : 'Speech Recognition tidak didukung di browser ini.');
+      onError?.('Fitur pengenalan suara (Speech Recognition) tidak didukung di browser ini.');
       return;
     }
 
@@ -174,8 +277,7 @@ class SpeechController {
       return;
     }
 
-    // Set recognition language strictly to id-ID or en-US
-    this.recognition.lang = lang === 'en' ? 'en-US' : 'id-ID';
+    this.recognition.lang = 'id-ID';
 
     this.recognition.onstart = () => {
       this.isListening = true;

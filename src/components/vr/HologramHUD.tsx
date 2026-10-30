@@ -8,19 +8,18 @@ import {
   BookOpen, 
   MessageSquare, 
   Volume2, 
-  VolumeX, 
   Bot, 
   CheckCircle2, 
   AlertTriangle, 
   ChevronRight, 
-  ChevronDown,
-  ChevronUp,
+  ChevronDown, 
+  ChevronUp, 
   FileText, 
-  Lock,
-  Cpu,
-  User,
-  Sparkles,
-  Square
+  Lock, 
+  Cpu, 
+  User, 
+  Sparkles, 
+  Square 
 } from 'lucide-react';
 
 interface HologramHUDProps {
@@ -31,6 +30,8 @@ interface HologramHUDProps {
   isMentorSpeaking: boolean;
   onSendMessage: (text: string) => void;
   onStopVoice: () => void;
+  onSpeakText: (text: string, id?: string) => void;
+  activeSpeakingId: string | null;
 }
 
 export const HologramHUD: React.FC<HologramHUDProps> = ({
@@ -40,9 +41,11 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
   messages,
   isMentorSpeaking,
   onSendMessage,
-  onStopVoice
+  onStopVoice,
+  onSpeakText,
+  activeSpeakingId
 }) => {
-  const { lang, t } = useLanguage();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'curriculum' | 'chat'>('curriculum');
   const [showTopicSelector, setShowTopicSelector] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -51,7 +54,7 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
   const activeConfig = getActiveAIConfig();
   const isCloudConfigured = Boolean(activeConfig.apiKey && activeConfig.apiKey.trim().length > 0);
 
-  // Automatically switch to chat tab, expand HUD, and scroll to bottom when a new response arrives
+  // Otomatis beralih ke tab chat dan scroll ke bawah saat pesan baru tiba
   useEffect(() => {
     if (messages.length > 0) {
       setIsMinimized(false);
@@ -66,8 +69,8 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
 
   const hasAdminGuide = Boolean(currentTopic.guide_content || currentTopic.guide_file_url);
   const guideText = hasAdminGuide
-    ? (currentTopic.guide_content || (lang === 'en' ? 'Please download the attached guide document below.' : 'Silakan unduh dokumen panduan terlampir di bawah ini.'))
-    : generateAIFallbackCurriculum(currentTopic.title, lang);
+    ? (currentTopic.guide_content || 'Silakan unduh dokumen panduan terlampir di bawah ini.')
+    : generateAIFallbackCurriculum(currentTopic.title, 'id');
 
   if (isMinimized) {
     return (
@@ -87,10 +90,10 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
             <button
               onClick={onStopVoice}
               className="py-1 px-2.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/60 text-rose-300 text-xs font-bold flex items-center gap-1 cursor-pointer animate-pulse shadow-sm"
-              title={lang === 'en' ? 'Stop speaking voice' : 'Hentikan Suara yang Menjawab'}
+              title="Hentikan Suara yang Menjawab"
             >
               <Square className="w-3 h-3 fill-current text-rose-400" />
-              <span>{lang === 'en' ? 'Stop' : 'Stop Suara'}</span>
+              <span>Hentikan Suara</span>
             </button>
           )}
 
@@ -112,7 +115,7 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
       {/* Background cyber grid effect */}
       <div className="absolute -top-20 -right-20 w-44 h-44 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
 
-      {/* Top Header: Topic Switcher & Mentor Badge & Minimize Button */}
+      {/* Top Header: Topic Switcher, Stop Voice Button, Mentor Badge & Minimize */}
       <div className="pb-3 border-b border-slate-800 flex items-center justify-between gap-2">
         <div className="relative">
           <button
@@ -128,11 +131,11 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
             <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showTopicSelector ? 'rotate-90' : ''}`} />
           </button>
 
-          {/* Floating Dropdown of 11 Topics */}
+          {/* Floating Dropdown 11 Topics */}
           {showTopicSelector && (
             <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900/95 border border-cyan-500/40 rounded-2xl p-2 shadow-2xl z-50 max-h-56 overflow-y-auto">
               <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-1 mb-1">
-                {lang === 'en' ? 'Select Module (11 Topics)' : 'Pilih Modul Pembelajaran (11 Topik)'}
+                Pilih Modul Pembelajaran (11 Topik)
               </div>
               {allTopics.map((tItem) => (
                 <button
@@ -161,16 +164,16 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
           )}
         </div>
 
-        {/* Right Header: Dedicated 3D Mentor Pill & Minimize Icon */}
+        {/* Right Header: Dedicated 3D Mentor Pill / Stop Voice Button & Minimize Icon */}
         <div className="flex items-center gap-1.5 sm:gap-2">
           {isMentorSpeaking ? (
             <button
               onClick={onStopVoice}
               className="flex items-center gap-1.5 py-1 px-3 rounded-full bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/60 text-rose-300 text-[11px] font-bold shadow-lg shadow-rose-950/40 transition-all cursor-pointer animate-pulse"
-              title={lang === 'en' ? 'Stop speaking voice' : 'Hentikan Suara yang Menjawab'}
+              title="Hentikan Suara yang Menjawab"
             >
               <Square className="w-3 h-3 fill-current text-rose-400" />
-              <span>{lang === 'en' ? 'Stop Voice' : 'Hentikan Suara'}</span>
+              <span>Hentikan Suara</span>
             </button>
           ) : (
             <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
@@ -193,7 +196,7 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
         </div>
       </div>
 
-      {/* Tabs Switcher: Kurikulum vs Tanya Jawab (Teks & Suara) */}
+      {/* Tabs Switcher: Panduan Kurikulum vs Tanya Jawab (Voice Q&A) */}
       <div className="flex border-b border-slate-800 my-2.5 sm:my-3 gap-2">
         <button
           onClick={() => setActiveTab('curriculum')}
@@ -232,32 +235,59 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
       >
         {activeTab === 'curriculum' ? (
           <div className="space-y-3">
-            {/* Guide Origin Pill */}
-            <div className="flex items-center justify-between text-[10px] sm:text-[11px]">
-              {hasAdminGuide ? (
-                <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold truncate">
-                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{t.curriculumFromAdmin}</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-blue-400 font-semibold truncate">
-                  <Bot className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{t.curriculumFromAI}</span>
-                </span>
-              )}
+            {/* Guide Header: Origin Pill & Play / Stop TTS Audio Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] pb-1">
+              <div className="flex items-center gap-2">
+                {hasAdminGuide ? (
+                  <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold truncate">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{t.curriculumFromAdmin}</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-blue-400 font-semibold truncate">
+                    <Bot className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{t.curriculumFromAI}</span>
+                  </span>
+                )}
 
-              {currentTopic.guide_file_url && (
-                <a
-                  href={currentTopic.guide_file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-cyan-400 hover:underline flex items-center gap-1 shrink-0 ml-2"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span className="hidden xs:inline">{t.downloadPdf}</span>
-                  <span className="xs:hidden">PDF</span>
-                </a>
-              )}
+                {currentTopic.guide_file_url && (
+                  <a
+                    href={currentTopic.guide_file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-cyan-400 hover:underline flex items-center gap-1 shrink-0 ml-1"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span className="hidden xs:inline">{t.downloadPdf}</span>
+                    <span className="xs:hidden">PDF</span>
+                  </a>
+                )}
+              </div>
+
+              {/* Tombol Bacakan / Hentikan Pembacaan Teks Kurikulum */}
+              <div className="flex items-center gap-2">
+                {isMentorSpeaking && activeSpeakingId === 'curriculum' ? (
+                  <button
+                    type="button"
+                    onClick={onStopVoice}
+                    className="flex items-center gap-1.5 py-1 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/60 text-rose-300 text-xs font-bold transition-all cursor-pointer animate-pulse shrink-0 shadow-md"
+                    title="Hentikan Pembacaan Materi Kurikulum"
+                  >
+                    <Square className="w-3.5 h-3.5 fill-current text-rose-400" />
+                    <span>Hentikan Pembacaan</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onSpeakText(guideText, 'curriculum')}
+                    className="flex items-center gap-1.5 py-1 px-3 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 text-xs font-bold transition-all cursor-pointer shrink-0 shadow-sm"
+                    title="Dengarkan Materi Kurikulum (Dibacakan Suara)"
+                  >
+                    <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Dengarkan Materi</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Guide Content Box */}
@@ -271,7 +301,7 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-1.5 text-[10px]">
               <div className="py-1 px-2 rounded-lg bg-slate-900/90 border border-slate-800 text-slate-400 flex items-center gap-1.5">
                 <Lock className="w-3 h-3 text-cyan-400 shrink-0" />
-                <span>{lang === 'en' ? 'RAM-Only' : 'RAM-Only (Privasi)'}</span>
+                <span>RAM-Only (Privasi)</span>
               </div>
               {isCloudConfigured ? (
                 <div className="py-1 px-2 rounded-lg bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 font-semibold flex items-center gap-1.5 shadow-sm">
@@ -281,10 +311,33 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
               ) : (
                 <div className="py-1 px-2 rounded-lg bg-amber-950/60 border border-amber-500/30 text-amber-300 font-semibold flex items-center gap-1.5 shadow-sm">
                   <Cpu className="w-3 h-3 text-amber-400 shrink-0" />
-                  <span className="truncate">{lang === 'en' ? 'Rule-Based Engine (Offline)' : 'Mode: Rule-Based (Offline)'}</span>
+                  <span className="truncate">Mode: Rule-Based (Offline)</span>
                 </div>
               )}
             </div>
+
+            {/* Banner Suara Aktif di Sesi Tanya Jawab (Voice Q&A) */}
+            {isMentorSpeaking && (
+              <div className="py-2 px-3 rounded-xl bg-rose-950/40 border border-rose-500/50 flex items-center justify-between text-xs animate-pulse shadow-md">
+                <div className="flex items-center gap-2 text-rose-300 font-medium truncate">
+                  <Volume2 className="w-4 h-4 text-rose-400 shrink-0 animate-bounce" />
+                  <span className="truncate">
+                    {activeSpeakingId === 'curriculum'
+                      ? 'Sedang membacakan materi kurikulum...'
+                      : 'AI Mentor sedang berbicara / membacakan teks...'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={onStopVoice}
+                  className="py-1 px-2.5 rounded-lg bg-rose-500/30 hover:bg-rose-500/50 border border-rose-500 text-rose-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md shrink-0 ml-2 transition-all active:scale-95"
+                  title="Hentikan Pembicaraan / Pembacaan Teks"
+                >
+                  <Square className="w-3 h-3 fill-current text-rose-300" />
+                  <span>Hentikan Suara</span>
+                </button>
+              </div>
+            )}
 
             {messages.length === 0 ? (
               <div className="py-8 text-center text-slate-500 text-xs">
@@ -299,35 +352,64 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
                   }`}
                 >
                   {/* Sender Header */}
-                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mb-1 px-1">
-                    {m.sender === 'user' ? (
-                      <>
-                        <span>{lang === 'en' ? 'You' : 'Anda'}</span>
-                        <User className="w-3 h-3 text-cyan-400" />
-                      </>
-                    ) : (
-                      <>
-                        <span
-                          className="w-1.5 h-1.5 rounded-full shrink-0"
-                          style={{ backgroundColor: currentTopic.character_primary_color }}
-                        />
-                        <span className="font-bold text-cyan-300">{currentTopic.character_name}</span>
+                  <div className="w-full flex items-center justify-between gap-1.5 text-[10px] text-slate-400 mb-1 px-1">
+                    <div className="flex items-center gap-1.5">
+                      {m.sender === 'user' ? (
+                        <>
+                          <span>Anda</span>
+                          <User className="w-3 h-3 text-cyan-400" />
+                        </>
+                      ) : (
+                        <>
+                          <span
+                            className="w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ backgroundColor: currentTopic.character_primary_color }}
+                          />
+                          <span className="font-bold text-cyan-300">{currentTopic.character_name}</span>
 
-                        {/* Engine Indicator Badge: AI vs Rule-Based */}
-                        {m.engine === 'ai' ? (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-semibold tracking-wide shadow-sm">
-                            <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
-                            <span>AI ({m.aiModel || 'Cloud LLM'})</span>
-                          </span>
+                          {/* Engine Indicator Badge: AI vs Rule-Based */}
+                          {m.engine === 'ai' ? (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-semibold tracking-wide shadow-sm">
+                              <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+                              <span>AI ({m.aiModel || 'Cloud LLM'})</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-semibold tracking-wide shadow-sm">
+                              <Cpu className="w-2.5 h-2.5 text-amber-400" />
+                              <span>Rule-Based (Offline)</span>
+                            </span>
+                          )}
+
+                          <span className="text-slate-500 hidden xs:inline">(Suara & Teks)</span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Tombol Kontrol Suara untuk Membacakan / Menghentikan Pesan Ini */}
+                    {m.sender === 'mentor' && (
+                      <div className="shrink-0 ml-2">
+                        {isMentorSpeaking && activeSpeakingId === m.id ? (
+                          <button
+                            type="button"
+                            onClick={onStopVoice}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/60 font-bold transition-all cursor-pointer animate-pulse shadow-sm text-[10px]"
+                            title="Hentikan Pembacaan Pesan Ini"
+                          >
+                            <Square className="w-2.5 h-2.5 fill-current text-rose-400" />
+                            <span>Hentikan Suara</span>
+                          </button>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-semibold tracking-wide shadow-sm">
-                            <Cpu className="w-2.5 h-2.5 text-amber-400" />
-                            <span>Rule-Based (Offline)</span>
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() => onSpeakText(m.text, m.id)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-800 hover:bg-cyan-950/60 text-slate-300 hover:text-cyan-300 border border-slate-700 hover:border-cyan-500/40 font-medium transition-all cursor-pointer shadow-sm text-[10px]"
+                            title="Dengarkan Pesan Ini (Dibacakan Suara)"
+                          >
+                            <Volume2 className="w-2.5 h-2.5 text-cyan-400" />
+                            <span>Dengarkan</span>
+                          </button>
                         )}
-
-                        <span className="text-slate-500 hidden xs:inline">({lang === 'en' ? 'Voice & Text' : 'Suara & Teks'})</span>
-                      </>
+                      </div>
                     )}
                   </div>
 
