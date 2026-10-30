@@ -19,7 +19,8 @@ import {
   Lock,
   Cpu,
   User,
-  Sparkles
+  Sparkles,
+  Square
 } from 'lucide-react';
 
 interface HologramHUDProps {
@@ -81,14 +82,27 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
           <span className="text-[11px] text-slate-400 hidden sm:inline font-mono">({currentTopic.character_name})</span>
         </div>
 
-        <button
-          onClick={() => setIsMinimized(false)}
-          className="py-1 px-2.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold flex items-center gap-1 cursor-pointer transition-all shrink-0"
-          title="Buka Hologram HUD"
-        >
-          <span>HUD</span>
-          <ChevronUp className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {isMentorSpeaking && (
+            <button
+              onClick={onStopVoice}
+              className="py-1 px-2.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/60 text-rose-300 text-xs font-bold flex items-center gap-1 cursor-pointer animate-pulse shadow-sm"
+              title={lang === 'en' ? 'Stop speaking voice' : 'Hentikan Suara yang Menjawab'}
+            >
+              <Square className="w-3 h-3 fill-current text-rose-400" />
+              <span>{lang === 'en' ? 'Stop' : 'Stop Suara'}</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setIsMinimized(false)}
+            className="py-1 px-2.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold flex items-center gap-1 cursor-pointer transition-all"
+            title="Buka Hologram HUD"
+          >
+            <span>HUD</span>
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     );
   }
@@ -152,12 +166,11 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
           {isMentorSpeaking ? (
             <button
               onClick={onStopVoice}
-              className="flex items-center gap-1.5 py-1 px-2.5 rounded-full bg-cyan-950/80 border border-cyan-400 text-[11px] font-bold text-cyan-300 animate-pulse cursor-pointer"
-              title={lang === 'en' ? 'Stop mentor voice' : 'Hentikan Suara Mentor'}
+              className="flex items-center gap-1.5 py-1 px-3 rounded-full bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/60 text-rose-300 text-[11px] font-bold shadow-lg shadow-rose-950/40 transition-all cursor-pointer animate-pulse"
+              title={lang === 'en' ? 'Stop speaking voice' : 'Hentikan Suara yang Menjawab'}
             >
-              <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{t.speakingBtn}</span>
-              <VolumeX className="w-3 h-3 text-slate-400 ml-1 hover:text-red-400" />
+              <Square className="w-3 h-3 fill-current text-rose-400" />
+              <span>{lang === 'en' ? 'Stop Voice' : 'Hentikan Suara'}</span>
             </button>
           ) : (
             <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
@@ -348,6 +361,7 @@ export const HologramHUD: React.FC<HologramHUDProps> = ({
         topicTitle={currentTopic.title}
         isMentorSpeaking={isMentorSpeaking}
         onSendMessage={onSendMessage}
+        onStopVoice={onStopVoice}
       />
     </div>
   );

@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { speechEngine } from '../../lib/speechEngine';
 import { useLanguage } from '../../lib/i18n';
-import { Mic, Send, Sparkles } from 'lucide-react';
+import { Mic, Send, Sparkles, Square, VolumeX } from 'lucide-react';
 
 interface VoiceChatBarProps {
   topicTitle: string;
   isMentorSpeaking: boolean;
   onSendMessage: (text: string) => void;
+  onStopVoice?: () => void;
 }
 
 export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
   topicTitle,
   isMentorSpeaking,
-  onSendMessage
+  onSendMessage,
+  onStopVoice
 }) => {
   const { lang, t } = useLanguage();
   const [inputText, setInputText] = useState('');
@@ -101,6 +103,19 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
           )}
         </button>
+
+        {/* Dedicated Stop Speaking Voice Button (Active when mentor is speaking) */}
+        {isMentorSpeaking && onStopVoice && (
+          <button
+            type="button"
+            onClick={onStopVoice}
+            className="px-3 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/60 text-rose-300 flex items-center gap-1.5 text-xs font-bold transition-all shadow-lg shadow-rose-950/40 cursor-pointer animate-pulse shrink-0"
+            title={lang === 'en' ? 'Stop Speaking Voice' : 'Hentikan Suara yang Menjawab'}
+          >
+            <Square className="w-3.5 h-3.5 fill-current text-rose-400" />
+            <span className="hidden xs:inline">{lang === 'en' ? 'Stop Voice' : 'Hentikan Suara'}</span>
+          </button>
+        )}
 
         {/* Text Input Field */}
         <div className="relative flex-1">

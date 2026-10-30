@@ -203,62 +203,62 @@ export function generateAIAnswer(topic: Topic, userQuestion: string, lang: 'id' 
   // 1. Basic Greeting Handler (Hanya menyapa, TIDAK memperkenalkan nama kecuali ditanya)
   if (isBasicGreeting(q)) {
     if (lang === 'en') {
-      return `Hello! How can I assist you with your learning of "${title}" today?`;
+      return `Hello! How can I assist you with "${title}" today?`;
     }
-    return `Halo! Ada konsep atau topik spesifik seputar "${title}" yang ingin Anda diskusikan atau tanyakan hari ini?`;
+    return `Halo! Ada konsep atau pertanyaan seputar "${title}" yang ingin Anda tanyakan hari ini?`;
   }
 
   // 2. Identity Inquiry Handler (HANYA KETIKA DITANYA identitas seperti "siapa kamu", "siapa anda", "who are you")
   if (isIdentityInquiry(q)) {
     if (lang === 'en') {
-      return `I am ${name}, the dedicated 3D AI Mentor for "${title}" at MetaChain WebXR Academy. Persona: ${topic.character_persona}. My duty is to guide you through ${title}.`;
+      return `I am ${name}, the 3D AI Mentor for "${title}" at MetaChain WebXR Academy. Persona: ${topic.character_persona}.`;
     }
-    return `Saya adalah ${name}, 3D AI Mentor khusus untuk materi "${title}" di MetaChain WebXR Academy. Persona saya: ${topic.character_persona}. Tugas utama saya adalah mendampingi Anda memahami materi ${title} dari tingkat dasar hingga mahir.`;
+    return `Saya adalah ${name}, 3D AI Mentor untuk materi "${title}" di MetaChain WebXR Academy. Persona: ${topic.character_persona}.`;
   }
 
   // 3. Strict Out-of-Context Check (Zero-Tolerance Scope Boundary)
   if (isOutOfContext(q, topic)) {
     if (lang === 'en') {
-      return `I apologize, but that question is outside my scope and duty for the topic "${title}". As the dedicated mentor for this module, I can only assist with questions directly related to ${title}. Please feel free to ask anything about ${title}!`;
+      return `I apologize, but that question is outside the scope of "${title}". As the dedicated mentor for this module, I can only assist with questions directly related to ${title}.`;
     }
-    return `Maaf, pertanyaan tersebut di luar tugas dan konteks materi "${title}". Sebagai mentor khusus materi ini, saya hanya dapat menjawab pertanyaan yang berkaitan langsung dengan ${title}. Silakan ajukan pertanyaan seputar ${title}!`;
+    return `Maaf, pertanyaan tersebut di luar tugas dan konteks materi "${title}". Sebagai mentor khusus materi ini, saya hanya dapat menjawab pertanyaan yang berkaitan langsung dengan ${title}.`;
   }
 
-  // 4. Topic Domain Educational Responses (Langsung ke jawaban materi, tanpa menyebut nama agent)
+  // 4. Topic Domain Educational Responses (Langsung ke inti jawaban materi, tanpa introduksi atau basa-basi pembuka)
   if (lang === 'en') {
     if (q.includes('what is') || q.includes('explain') || q.includes('definition')) {
-      return `AI can make mistakes, but in concept, ${title} is centered on ${topic.description.toLowerCase()}. The core key is grasping its structural architecture and how data exchanges reliably. Which part would you like to explore deeper?`;
+      return `${title} centers on ${topic.description.toLowerCase()}. The core foundation lies in its structural architecture and how components reliably exchange instructions.`;
     }
     if (q.includes('benefit') || q.includes('advantage') || q.includes('why')) {
-      return `Keep in mind that AI can make mistakes, but the paramount advantage of ${title} lies in scalability, system resilience, and minimizing operational friction in high-throughput environments. Without it, modern large-scale applications experience critical bottlenecks.`;
+      return `The primary advantage of ${title} lies in high scalability, structural resilience, and reducing operational friction in large-scale modern environments.`;
     }
     if (q.includes('roadmap') || q.includes('start') || q.includes('learn') || q.includes('beginner')) {
-      return `Practical roadmap advice (note that AI can make mistakes): Do not rush into complex frameworks right away! Master the foundational protocols first: understand data flows and state management, then construct a minimal proof-of-concept project locally.`;
+      return `Start by mastering foundational protocols: understand data flows and state management first, then build a minimal proof-of-concept project locally.`;
     }
     if (q.includes('challenge') || q.includes('drawback') || q.includes('risk')) {
-      return `Every technology entails trade-offs. In ${title}, the biggest hurdles typically involve the learning curve, security posture validation, and infrastructure overhead if not architected cleanly from the outset.`;
+      return `The biggest hurdles in ${title} typically involve the learning curve, security posture validation, and infrastructure overhead if not architected cleanly from the outset.`;
     }
-    return `That is an interesting question regarding ${title}! Note that AI can make mistakes, but the core concept relates directly to ${topic.character_persona.split(',')[0]}. Feel free to ask more specific questions about ${title}!`;
+    return `The key foundation of ${title} relates directly to ${topic.character_persona.split(',')[0]} and the practical implementation of ${topic.description.toLowerCase()}.`;
   }
 
-  // Indonesian responses (Langsung ke jawaban materi, tanpa menyebut nama agent)
+  // Indonesian responses (Langsung ke inti jawaban materi, tanpa introduksi atau basa-basi pembuka)
   if (q.includes('apa itu') || q.includes('jelaskan') || q.includes('pengertian')) {
-    return `AI ini dapat membuat kesalahan, namun secara prinsip, ${title} adalah fondasi penting yang berfokus pada ${topic.description.toLowerCase()}. Kuncinya ada pada pemahaman arsitektur dan bagaimana komponen di dalamnya saling bertukar instruksi. Ada bagian spesifik yang ingin Anda bedah lebih dalam?`;
+    return `${title} berfokus pada ${topic.description.toLowerCase()}. Konsep intinya terletak pada arsitektur sistem dan bagaimana komponen di dalamnya saling bertukar instruksi secara andal.`;
   }
   
   if (q.includes('kelebihan') || q.includes('manfaat') || q.includes('kenapa')) {
-    return `Perlu diingat bahwa AI ini dapat membuat kesalahan. Namun keunggulan terbesar ${title} terletak pada efisiensi, skalabilitas, dan kemampuannya mengurangi kompleksitas operasional di lingkungan produksi modern. Tanpa fondasi ini, sistem berskala jutaan pengguna akan sangat rentan terhadap bottleneck.`;
+    return `Keunggulan terbesar ${title} terletak pada efisiensi tinggi, skalabilitas arsitektur, dan kemampuannya mengurangi kompleksitas operasional di lingkungan produksi modern.`;
   }
 
   if (q.includes('cara belajar') || q.includes('mulai dari mana') || q.includes('roadmap')) {
-    return `Saran praktis (ingat bahwa AI ini dapat membuat kesalahan): Jangan langsung loncat ke framework yang rumit! Kuasai dulu konsep dasarnya: bagaimana aliran datanya bekerja, pahami istilah intinya, lalu buatlah proyek mini untuk menguji konsep tersebut secara nyata di lingkungan lokal Anda.`;
+    return `Kuasai konsep dasarnya terlebih dahulu: pahami bagaimana aliran data dan manajemen state bekerja, lalu bangun proyek mini untuk mengujinya secara nyata di lingkungan lokal.`;
   }
 
   if (q.includes('tantangan') || q.includes('kelemahan') || q.includes('bahaya')) {
-    return `Setiap teknologi selalu memiliki trade-off. Untuk ${title}, tantangan terbesarnya biasanya ada pada kurva pembelajaran, pengelolaan keamanan (security posture), dan overhead biaya infrastruktur jika tidak dioptimasi sejak awal perancangan.`;
+    return `Tantangan terbesar dalam ${title} meliputi kurva pemahaman konsep, pengelolaan keamanan (security posture), dan overhead infrastruktur jika tidak dioptimasi sejak awal.`;
   }
 
-  // General conversational reply inside topic domain
-  return `Pertanyaan yang sangat menarik mengenai ${title}! Harap diingat bahwa AI ini dapat membuat kesalahan, namun poin kuncinya berkaitan erat dengan prinsip ${topic.character_persona.split(',')[0]}. Silakan ajukan aspek teknis lain seputar ${title} yang ingin Anda eksplorasi!`;
+  // General direct reply inside topic domain
+  return `Poin kunci materi ${title} berkaitan erat dengan prinsip ${topic.character_persona.split(',')[0]} serta penerapan praktis dari ${topic.description.toLowerCase()}.`;
 }
 

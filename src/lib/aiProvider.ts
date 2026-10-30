@@ -187,6 +187,42 @@ export interface MentorResult {
 }
 
 /**
+ * Strips conversational fluff, preambles, and unprompted self-introductions from responses.
+ */
+export function cleanMentorResponse(rawText: string, isIdentity: boolean): string {
+  if (!rawText) return '';
+  let cleaned = rawText.trim();
+
+  // If user didn't ask an identity inquiry, remove any accidental self-introduction or preamble filler
+  if (!isIdentity) {
+    // 1. Remove self-introductions: "Halo, saya...", "Saya adalah...", "Sebagai mentor...", "Perkenalkan..."
+    cleaned = cleaned.replace(/^(halo|hai|hello|hi|hey)[,!.]*\s*(saya|aku|nama saya|i am|my name is)\s+[^.,!?]+[,.!?]\s*/i, '');
+    cleaned = cleaned.replace(/^(saya|aku|i am)\s+(adalah\s+)?(mentor|ai mentor|virtual mentor)[^.,!?]*[,.!?]\s*/i, '');
+    cleaned = cleaned.replace(/^sebagai\s+(3d\s+)?(ai\s+)?mentor[^.,!?]*[,.!?]\s*/i, '');
+    cleaned = cleaned.replace(/^(perkenalkan|let me introduce)[^.,!?]*[,.!?]\s*/i, '');
+
+    // 2. Remove conversational preamble fillers: "Tentu saja!", "Pertanyaan bagus!", "Mari kita bahas...", etc.
+    cleaned = cleaned.replace(/^(tentu saja|tentu|sure thing|sure|certainly|baiklah|baik)[,!.]*\s*/i, '');
+    cleaned = cleaned.replace(/^(pertanyaan yang (sangat )?bagus|pertanyaan bagus|pertanyaan menarik|great question|interesting question)[,!.]*\s*/i, '');
+    cleaned = cleaned.replace(/^(mari kita (bahas|pelajari|simak|bedah)|let's explore|let's discuss)[,!.]*\s*/i, '');
+
+    // 3. Remove standalone greeting prefixes before the real answer
+    cleaned = cleaned.replace(/^(halo|hai|hello|hi|hey|selamat (pagi|siang|sore|malam)|good (morning|afternoon|evening))[,!.]+\s+(?=[A-Z0-9a-z])/i, '');
+
+    // 4. Remove perspective boilerplate if model parrots it into spoken response
+    cleaned = cleaned.replace(/^(AI ini dapat membuat kesalahan[,.]*|Perlu diingat bahwa AI ini dapat membuat kesalahan[,.]*)\s*(namun|tetapi|tapi)?\s*/i, '');
+    cleaned = cleaned.replace(/^(Keep in mind that AI can make mistakes[,.]*|AI can make mistakes[,.]*)\s*(but|however)?\s*/i, '');
+  }
+
+  // Capitalize first character
+  if (cleaned.length > 0) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+
+  return cleaned.trim() || rawText.trim();
+}
+
+/**
  * Universal Unified LLM Query Engine
  * Automatically routes the learning conversation to Google, OpenAI, Anthropic, or DeepSeek.
  */
@@ -198,9 +234,10 @@ export async function queryActiveLLMMentor(
 ): Promise<MentorResult> {
   const config = getActiveAIConfig();
   const apiKey = config.apiKey.trim();
+  const isIdentity = isIdentityInquiry(userQuestion);
 
   // Instant Guardrail Check: Greetings, Identity queries, or Out-of-Context queries are handled by rule-based heuristic
-  if (isBasicGreeting(userQuestion) || isIdentityInquiry(userQuestion) || isOutOfContext(userQuestion, topic)) {
+  if (isBasicGreeting(userQuestion) || isIdentity || isOutOfContext(userQuestion, topic)) {
     return {
       text: offlineFallbackAnswer,
       engine: 'rule_based'
@@ -217,40 +254,48 @@ export async function queryActiveLLMMentor(
 
   const systemInstruction = lang === 'en'
     ? `
-You are ${topic.character_name}, a dedicated 3D AI Mentor for "${topic.title}" at MetaChain WebXR Academy.
-Your persona: ${topic.character_persona}.
-Scope: You teach ONLY "${topic.title}".
+You are a concise, high-caliber educator teaching "${topic.title}" at MetaChain WebXR Academy.
+Context: "${topic.title}" - ${topic.description}.
+Persona: ${topic.character_persona}.
 
-CRITICAL RULE - NO UNPROMPTED SELF-INTRODUCTION:
-- Do NOT introduce yourself or state your name (e.g. NEVER say "Hello, I am...", "I am...", "As [name]...") unless the user specifically asks who you are ("who are you", "what is your name").
-- Answer the user's technical question directly, concisely, and immediately.
+STRICT MANDATORY RULES:
+1. NO GREETINGS, NO INTRODUCTIONS, NO PREAMBLE:
+   - NEVER start with self-introductions (NEVER say "Hello, I am [name]...", "My name is...", "As your mentor...").
+   - NEVER start with conversational filler (NEVER say "Hello!", "Hi!", "Sure!", "Great question!", "Let's explore...", "Certainly!").
+   - JUMP IMMEDIATELY into the direct answer and technical explanation.
+   - Mention your identity (${topic.character_name}) ONLY if the student explicitly asks who you are.
 
-CRITICAL SCOPE RESTRICTION (STRICT ZERO-TOLERANCE):
-- You must NOT answer any question outside the domain of "${topic.title}".
-- If the user asks about anything outside of "${topic.title}" (e.g., cooking recipes, food, politics, celebrities, sports, medical advice, romance, general trivia), you MUST refuse without exception:
-  "I apologize, but that question is outside my scope and duty for the topic \"${topic.title}\". As the dedicated mentor for this module, I can only assist with questions directly related to ${topic.title}. Please feel free to ask anything about ${topic.title}!"
+2. ZERO-TOLERANCE SCOPE BOUNDARY:
+   - You teach ONLY "${topic.title}".
+   - If the user asks about anything outside "${topic.title}" (cooking, recipes, politics, sports, entertainment, medical, romance, general trivia), reply ONLY:
+     "I apologize, but that question is outside the scope of \"${topic.title}\". As the dedicated mentor for this module, I can only assist with questions directly related to ${topic.title}."
 
-Tone: Highly educational, clear, articulate, warm, and concise (maximum 3-4 sentences), optimized to sound clear and natural on text-to-speech voice.
-MANDATORY: Always remember that AI can make mistakes. Provide clear, accurate pedagogical insights.
-Answer strictly in English with clear pronunciation-friendly vocabulary.
+3. FORMAT & LENGTH:
+   - Highly educational, precise, articulate, and concise (maximum 2-3 sentences).
+   - Optimized for clear, natural text-to-speech audio.
+   - Answer in English.
 `.trim()
     : `
-Kamu adalah ${topic.character_name}, 3D AI Mentor untuk topik "${topic.title}" di akademi virtual MetaChain WebXR.
-Persona kamu: ${topic.character_persona}.
-Konteks: Kamu HANYA mengajar materi "${topic.title}".
+Kamu adalah edukator handal yang mengajar materi "${topic.title}" di akademi virtual MetaChain WebXR.
+Konteks Materi: "${topic.title}" - ${topic.description}.
+Persona: ${topic.character_persona}.
 
-ATURAN PENTING - JANGAN PERKENALKAN DIRI KECUALI DITANYA:
-- JANGAN memulai jawaban dengan memperkenalkan namamu (contoh: JANGAN katakan "Halo, saya...", "Perkenalkan saya...", "Sebagai [nama]...") KECUALI jika pengguna secara khusus bertanya siapa kamu ("siapa kamu", "siapa anda", "siapa namamu").
-- Jawab pertanyaan teknis pengguna secara langsung, padat, dan jelas ke inti materi.
+ATURAN MUTLAK (WAJIB DIPATUHI):
+1. DILARANG MEMBERIKAN INTRODUKSI, SALAM, ATAU BASA-BASI PEMBUKA:
+   - DILARANG KERAS memperkenalkan diri di awal jawaban (JANGAN katakan "Halo, saya [nama]...", "Nama saya...", "Sebagai mentor...").
+   - DILARANG KERAS menggunakan basa-basi atau kata pembuka (JANGAN katakan "Halo!", "Hai!", "Tentu saja!", "Pertanyaan yang bagus!", "Mari kita bahas...", "Baiklah...").
+   - LANGSUNG jelaskan jawaban/konsep materi secara to-the-point dan lugas.
+   - Nama karakter (${topic.character_name}) HANYA boleh diucapkan jika pengguna secara eksplisit menanyakan siapa kamu.
 
-BATASAN RUANG LINGKUP MUTLAK (TANPA PENGECUALIAN):
-- Kamu DILARANG KERAS menjawab pertanyaan di luar topik "${topic.title}".
-- Jika pengguna menanyakan hal apapun di luar "${topic.title}" (contohnya: resep masakan, makanan, politik, artis, sepak bola, kesehatan/obat, percintaan, gosip, atau topik di luar ${topic.title}), kamu WAJIB menolak dengan tegas dan sopan:
-  "Maaf, pertanyaan tersebut di luar tugas dan konteks materi \"${topic.title}\". Sebagai mentor khusus materi ini, saya hanya dapat menjawab pertanyaan yang berkaitan langsung dengan ${topic.title}. Silakan ajukan pertanyaan seputar ${topic.title}!"
+2. BATASAN RUANG LINGKUP MUTLAK:
+   - Kamu HANYA mengajar materi "${topic.title}".
+   - Jika pengguna bertanya di luar materi "${topic.title}" (resep masakan, makanan, politik, artis, bola, obat, cinta, dsb.), jawab HANYA:
+     "Maaf, pertanyaan tersebut di luar tugas dan konteks materi \"${topic.title}\". Sebagai mentor khusus materi ini, saya hanya dapat menjawab pertanyaan yang berkaitan langsung dengan ${topic.title}."
 
-Gaya bicara: Edukatif, bersahabat, sangat jelas, ringkas (maksimal 3-4 kalimat padat), dan nyaman didengarkan via suara (Text-to-Speech).
-PENTING: Selalu ingat bahwa AI ini dapat membuat kesalahan. Berikan penjelasan edukatif yang jelas dan akurat.
-Jawab dengan tegas dan jelas dalam Bahasa Indonesia.
+3. FORMAT & PANJANG JAWABAN:
+   - Padat, jelas, akurat, edukatif (maksimal 2-3 kalimat to-the-point).
+   - Nyaman dan natural didengarkan via suara (Text-to-Speech).
+   - Jawab dalam Bahasa Indonesia.
 `.trim();
 
   try {
@@ -276,7 +321,7 @@ Jawab dengan tegas dan jelas dalam Bahasa Indonesia.
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
       if (text && text.trim()) {
         return {
-          text: text.trim(),
+          text: cleanMentorResponse(text.trim(), isIdentity),
           engine: 'ai',
           modelName: `Google Gemini (${model})`
         };
@@ -313,7 +358,7 @@ Jawab dengan tegas dan jelas dalam Bahasa Indonesia.
       const text = data?.choices?.[0]?.message?.content;
       if (text && text.trim()) {
         return {
-          text: text.trim(),
+          text: cleanMentorResponse(text.trim(), isIdentity),
           engine: 'ai',
           modelName: `OpenAI (${model})`
         };
@@ -350,7 +395,7 @@ Jawab dengan tegas dan jelas dalam Bahasa Indonesia.
       const text = data?.content?.[0]?.text;
       if (text && text.trim()) {
         return {
-          text: text.trim(),
+          text: cleanMentorResponse(text.trim(), isIdentity),
           engine: 'ai',
           modelName: `Anthropic Claude (${model})`
         };
@@ -387,7 +432,7 @@ Jawab dengan tegas dan jelas dalam Bahasa Indonesia.
       const text = data?.choices?.[0]?.message?.content;
       if (text && text.trim()) {
         return {
-          text: text.trim(),
+          text: cleanMentorResponse(text.trim(), isIdentity),
           engine: 'ai',
           modelName: `DeepSeek (${model})`
         };

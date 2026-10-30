@@ -10,7 +10,7 @@ import { queryActiveLLMMentor, getActiveAIConfig, PROVIDER_PRESETS } from '../..
 import { useLanguage } from '../../lib/i18n';
 import { LanguageToggle } from '../common/LanguageToggle';
 import { ThemeToggle } from '../common/ThemeToggle';
-import { Glasses, LogOut, Compass } from 'lucide-react';
+import { Glasses, LogOut, Compass, Square } from 'lucide-react';
 
 interface VRCanvasProps {
   currentUser: Profile;
@@ -309,6 +309,18 @@ export const VRCanvas: React.FC<VRCanvasProps> = ({
 
         {/* Action Buttons: Theme Toggle, Language Switcher, Enter VR & Logout */}
         <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+          {/* Quick Stop Voice Button if Speaking */}
+          {isMentorSpeaking && (
+            <button
+              onClick={handleStopVoice}
+              className="py-1 px-2.5 sm:py-1.5 sm:px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/60 text-rose-300 text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-rose-950/40 transition-all cursor-pointer animate-pulse"
+              title={lang === 'en' ? 'Stop Speaking Voice' : 'Hentikan Suara yang Menjawab'}
+            >
+              <Square className="w-3.5 h-3.5 fill-current text-rose-400" />
+              <span className="hidden xs:inline">{lang === 'en' ? 'Stop Voice' : 'Hentikan Suara'}</span>
+            </button>
+          )}
+
           <ThemeToggle />
           <LanguageToggle />
 
